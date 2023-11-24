@@ -1,0 +1,25 @@
+The following are the keywords of the lng language:
+
+- var
+- const
+- fun
+- type
+- trait
+- for
+- if
+- else
+- match
+- base
+- instanceof
+- implements
+- mimics
+- return
+- yield
+- break
+- continue
+- of
+- or
+- this
+- use
+- package
+- courout

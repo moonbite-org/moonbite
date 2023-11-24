@@ -1,0 +1,295 @@
+trait Saturable<T> {
+  fun default() T
+}
+
+type String implements [Saturable<string>] string
+
+fun for String default() string {
+  return ""
+}
+
+fun for String length() Int {
+  var Int length = len(this)
+  return length
+}
+
+static fun for String from_bytes(p List<Byte>) String {
+  return btoa(p)
+}
+
+fun string_from_bytes(p List<Byte>) String {
+  var String str = btoa(p)
+  return str
+}
+
+type Int implements [Saturable<int>] int
+
+fun for Int default() int {
+  return 0
+}
+
+type IteratorResult<T> {
+  value T
+  is_done Bool
+}
+
+trait Iterable<T> {
+  fun next() IteratorResult<T>
+}
+
+type List<T> implements [Saturable<T[]>, Iterable<T>] T[]
+
+fun for List default() List<T> {
+  return []
+}
+
+fun for List next() IteratorResult<T> {
+  for (var i = 0; i < this.length(); i++) {
+    yield IteratorResult{
+      value: this[i],
+      is_done: false
+    }
+  }
+
+  return IteratorResult{
+    value: T{},
+    is_done: true
+  }
+}
+
+fun for List length() Int {
+  return len(this)
+}
+
+type PathBuff string
+
+trait Writable {
+  fun write(p List<Byte>) Int
+}
+
+trait Readable {
+  fun read(p List<Byte>) Int
+}
+
+trait Streamable mimics [Writable, Readable] {}
+
+trait Printable {
+  fun string() String
+}
+
+trait Warning mimics [Printable] {
+  fun reason() String
+}
+
+type FileWarning implements [Warning] String
+
+fun for FileWarning string() String {
+  return format("There was a problem with the file. %s", this.reason())
+}
+
+fun for FileWarning reason() String {
+  return this
+}
+
+type Stdout mimics [Streamable] int
+
+fun for Stdout write(p List<Byte>) Int {
+  return syscall.write(this, p)
+}
+
+fun for Stdout read(p List<Byte>) Int {
+  return syscall.read(this, p, p.length)
+}
+
+type Os {
+  stdout Stdout
+}
+
+const os = Os{
+  stdout: 0
+}
+
+type Console {}
+
+fun for Console log(...messages Printable[]) {
+  for (,message of messages) {
+    os.stdout.write(atob(message.string()))
+  }
+}
+
+const console = Console{}
+
+type File implements [Streamable] PathBuff
+
+constructor for File {
+  syscall.stat(this) or warn(^)
+}
+
+fun for File write(p List<Byte>) Int {
+  var fd = syscall.open(this) or warn(^)
+  var s = syscall.write(fd, p) or warn(^)
+  syscall.close(fd) or warn(^)
+  return s
+}
+
+fun for File read(p List<Byte>) Int {
+  var fd = syscall.open(this) or warn(^)
+  var n = syscall.read(fd, p, p.length) or warn(^)
+  syscall.close(fd) or warn(^)
+  return n
+}
+
+fun for File read_all() List<Byte> {
+  var stat = syscall.stat(this) or warn(^)
+  var List<Byte> buf = []
+  buf.length = stat.size
+  this.read(buf) or warn(^)
+  return buf
+}
+
+fun for File read_all_string() String {
+  return string_from_bytes(this.read_all() or warn(^)) or warn(^)
+}
+
+type Json<T> implements [Saturable<String>] String
+
+fun for Json decode() T {
+  var t = T{} 
+  json_decode(this, t) or warn(^)
+  return t
+} ParseWarning
+
+trait Observable<T> {
+  fun on_declared()
+  fun on_set(value T, key String | String("this"))
+  fun on_dependency_added(dependency Printable)
+  fun on_dependency_removed(dependency Printable)
+  fun tick()
+}
+
+var String first_name = "John"
+var String last_name = "Doe"
+var String full_name = format("%s %s", first_name, last_name)
+
+first_name = "Jon"
+first_name.tick()
+
+// parallel.lng
+use http
+
+fun get_res(data Channel<http.Response>) {
+  data <- http.get("https://some.resource.org", http.GetOptions{}) or warn(^)
+}
+
+fun main() {
+  var data Channel<Int>
+
+  move {
+    console.log("this will run in parallel")
+    data <- 5
+  }
+
+  // move another_fun()
+
+  var count = <- data
+  console.log("this will run immediately")
+
+  var data Channel<http.Response>
+  move get_res(data)
+
+  console.log("this will run immediately")
+  console.log(<- data)
+}
+
+// pointers
+
+fun main() {
+  var Int x = 10
+  var p_x = ref(x) // p_x instanceof Reference<Int>
+  var y = deref(p_x) // y instanceof Int
+}
+
+type User {
+  first_name String
+  last_name String
+}
+
+const name = "outer scope var"
+
+fun main() {
+  var user = User{
+    first_name: "John",
+    last_name: "Doe",
+  }
+
+  update_user(ref(user))
+}
+
+fun update_user(user Reference<User>) {
+  user.first_name = "Jane"
+}
+
+// main.lng
+
+type UserKind String("user") | String("admin")
+
+type User {
+  first_name String
+  last_name String
+  age Int
+  kind UserKind
+}
+
+type AdminUser User({
+  kind String("admin")
+})
+
+type Todo {
+  id Int
+  label String
+  author User
+}
+
+
+const HtmlTemplate<List<Todo>> tmpl = `
+  <div>
+    <form>
+      <input placeholder="New todo" />
+      <button type="submit">Add Todo</button>
+    </form>
+    <ul>
+      if (todos.length() == 0) {
+        put(<p>There are no todos yet</p>)
+      }
+      list (todo in todos) {
+        put(<p>There are no todos yet</p>)
+      } {
+        put(`<li id="{todo.id}">{todo.label}</li>`)
+      }
+    </ul>
+  </div>
+`
+
+fun main() {
+  var File file = "./data.json" // might warn
+  var Json<List<Todo>> json = file.read_all_string() // might warn
+  var todos = json.decode() // might warn
+  var Html html = tmpl.execute(todos) // might warn
+  var doc = html.parse() // might warn
+  var List<Int32> f = []
+
+  // or
+  var doc = tmpl.execute(("./data.json".(File).read_all_string()).(Json<List<Todo>>).decode()).(Html).parse()
+
+  var value = match (some_value) {
+    . instanceof String && .length() == 3 -> {
+      return Bool(true)
+    }
+    default -> {
+      return String("")
+    }
+  }
+
+  // value is typeof bool(true) | List<Byte>("")
+  // value is typeof Bool(true) | String("")
+}

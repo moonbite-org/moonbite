@@ -1,0 +1,33 @@
+package lexer
+
+type TokenKind int
+
+const token_kinds = {}
+
+type Location {
+	line   Int
+	column Int
+}
+
+type Token {
+  kind        TokenKind
+	location    Location   
+	literal     String     
+	raw         String     
+	offset      Int        
+	line_breaks Int       
+}
+
+fun for Token String() String {
+  if (t.Kind < Keyword) {
+		if (t.Kind == Whitespace) {
+			return format("ws[%d:%d][%d]", t.location.line, t.location.column, t.offset)
+		} else if (t.Kind == NewLine) {
+			return format("nl[%d:%d][%d]", t.location.line, t.location.column, t.offset)
+		} else {
+			return format("%s(%s)[%d:%d][%d]", token_map[t.Kind], t.Literal, t.location.line, t.Location.column, t.offset)
+		}
+	}
+
+	return format("<%s>[%d:%d][%d]", t.Literal, t.location.line, t.location.column, t.offset)
+}
