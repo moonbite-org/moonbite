@@ -45,6 +45,7 @@ const (
 	ThisExpressionKind          expression_kind = "expression:this"
 	SteppedChangeExpressionKind expression_kind = "expression:stepped_change"
 	AnonymousFunExpressionKind  expression_kind = "expression:anonymous_fun"
+	OrExpressionKind            expression_kind = "expression:or"
 
 	// literal expressions
 	StringLiteralExpressionKind   expression_kind = "expression:string-literal"
@@ -755,8 +756,8 @@ func (e BoolLiteralExpression) Location() Location {
 }
 
 type NumberLiteral struct {
-	Type  TypeLiteral
-	Value interface{}
+	Type  TypeLiteral `json:"type"`
+	Value interface{} `json:"value"`
 }
 
 type NumberLiteralExpression struct {
@@ -927,5 +928,19 @@ func (e SteppedChangeExpression) Kind() expression_kind {
 }
 
 func (e SteppedChangeExpression) Location() Location {
+	return e.location
+}
+
+type OrExpression struct {
+	LeftHandSide  Expression `json:"left_hand_side"`
+	RightHandSide Expression `json:"right_hand_side"`
+	location      Location
+}
+
+func (e OrExpression) Kind() expression_kind {
+	return OrExpressionKind
+}
+
+func (e OrExpression) Location() Location {
 	return e.location
 }

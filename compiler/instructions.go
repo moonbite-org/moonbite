@@ -1,27 +1,18 @@
 package compiler
 
-import "github.com/moonbite-org/moonbite/serde"
-
-var InstructionMap = map[string]byte{
-	"define_module": 10,
-	"save":          20,
-	"load_pointer":  21,
-	"load_value":    22,
-	"load_param":    23,
-	"call":          24,
-}
+import "github.com/moonbite-org/moonbite/common"
 
 func define_module(name string, is_entry bool) []byte {
-	result := []byte{InstructionMap["define_module"]}
-	result = append(result, serde.SerializeBool(is_entry)...)
-	result = append(result, serde.SerializeString(name)...)
+	result := []byte{common.InstructionMap["define_module"]}
+	result = append(result, SerializeBool(is_entry)...)
+	result = append(result, SerializeString(name)...)
 
 	return result
 }
 
 func save(pointer int, value interface{}) ([]byte, error) {
-	result := []byte{InstructionMap["save"]}
-	p, err := serde.SerializeValue(pointer)
+	result := []byte{common.InstructionMap["save"]}
+	p, err := SerializeValue(pointer)
 
 	if err != nil {
 		return result, err
@@ -29,7 +20,7 @@ func save(pointer int, value interface{}) ([]byte, error) {
 
 	result = append(result, p...)
 
-	v, err := serde.SerializeValue(value)
+	v, err := SerializeValue(value)
 
 	if err != nil {
 		return result, err
@@ -41,8 +32,8 @@ func save(pointer int, value interface{}) ([]byte, error) {
 }
 
 func call(pointer int, args []int) ([]byte, error) {
-	result := []byte{InstructionMap["call"]}
-	p, err := serde.SerializeValue(pointer)
+	result := []byte{common.InstructionMap["call"]}
+	p, err := SerializeValue(pointer)
 
 	if err != nil {
 		return result, err
@@ -52,7 +43,7 @@ func call(pointer int, args []int) ([]byte, error) {
 
 	arg_list := []byte{}
 	for _, arg := range args {
-		val, err := serde.SerializeValue(arg)
+		val, err := SerializeValue(arg)
 
 		if err != nil {
 			return result, err
@@ -61,7 +52,7 @@ func call(pointer int, args []int) ([]byte, error) {
 		arg_list = append(arg_list, val...)
 	}
 
-	length, err := serde.SerializeValue(len(args))
+	length, err := SerializeValue(len(args))
 
 	if err != nil {
 		return result, err
@@ -74,9 +65,9 @@ func call(pointer int, args []int) ([]byte, error) {
 }
 
 func load_pointer(pointer int) ([]byte, error) {
-	result := []byte{InstructionMap["load_pointer"]}
+	result := []byte{common.InstructionMap["load_pointer"]}
 
-	p, err := serde.SerializeValue(pointer)
+	p, err := SerializeValue(pointer)
 
 	if err != nil {
 		return result, err
@@ -88,9 +79,9 @@ func load_pointer(pointer int) ([]byte, error) {
 }
 
 func load_value(value interface{}) ([]byte, error) {
-	result := []byte{InstructionMap["load_value"]}
+	result := []byte{common.InstructionMap["load_value"]}
 
-	v, err := serde.SerializeValue(value)
+	v, err := SerializeValue(value)
 
 	if err != nil {
 		return result, err
@@ -102,9 +93,9 @@ func load_value(value interface{}) ([]byte, error) {
 }
 
 func load_param(index int) ([]byte, error) {
-	result := []byte{InstructionMap["load_index"]}
+	result := []byte{common.InstructionMap["load_index"]}
 
-	i, err := serde.SerializeValue(index)
+	i, err := SerializeValue(index)
 
 	if err != nil {
 		return result, err

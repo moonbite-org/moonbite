@@ -163,6 +163,7 @@ func parse_seperated_list[T any](p *parser_s, parser_func func() T, seperator to
 	result := []T{}
 	p.must_expect([]token_kind{opener})
 	p.skip_whitespace()
+	p.skip_comment()
 
 	is_closing := p.might_expect([]token_kind{closer})
 
@@ -178,6 +179,7 @@ func parse_seperated_list[T any](p *parser_s, parser_func func() T, seperator to
 		p.skip_whitespace()
 		next := p.must_expect([]token_kind{seperator, closer})
 		p.skip_whitespace()
+		p.skip_comment()
 
 		switch next.Kind {
 		case seperator:

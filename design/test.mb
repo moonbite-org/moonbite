@@ -1,33 +1,17 @@
 package main
 
-type Slice<T> {
-  value T
+type Console {
+  fd int;
 }
 
-fun for Slice set(value T) {
-  this.value = value
+fun for Console log(message Printable) {
+  syscall.write(this.fd, message)
 }
 
-fun for Slice set1(value T) {
-  this.value = value
+const console = os.Console{
+  fd: 0,
 }
 
-fun for Slice set2(value T) {
-  this.value = value
-}
-
-fun for Slice set3(value T) {
-  this.value = value
-}
-
-fun for Slice set4(value T) {
-  this.value = value
-}
-
-fun for Slice set5(value T) {
-  this.value = value
-}
-
-fun for Slice set6(value T) {
-  this.value = value
+fun main() {
+  print("Hello, World!")
 }

@@ -2,8 +2,6 @@ package compiler
 
 import (
 	"fmt"
-
-	"github.com/moonbite-org/moonbite/serde"
 )
 
 type Compiler struct {
@@ -28,6 +26,23 @@ func (c Compiler) Compile() ([]byte, error) {
 	result := []byte{}
 
 	for _, mod := range c.Modules {
+		if mod.IsEntry {
+			compiled, err := mod.Compile()
+
+			if err != nil {
+				return result, err
+			}
+
+			result = append(result, compiled...)
+			break
+		}
+	}
+
+	for _, mod := range c.Modules {
+		if mod.IsEntry {
+			continue
+		}
+
 		compiled, err := mod.Compile()
 
 		if err != nil {
@@ -41,11 +56,13 @@ func (c Compiler) Compile() ([]byte, error) {
 }
 
 type Module struct {
-	Name    string
-	IsEntry bool
-	bin     []byte
-	error   error
-	pointer int
+	Name             string
+	Builtins         map[string]int
+	IsEntry          bool
+	bin              []byte
+	error            error
+	pointer          int
+	internal_pointer int
 }
 
 func (m Module) Compile() ([]byte, error) {
@@ -59,7 +76,7 @@ func (m Module) Compile() ([]byte, error) {
 	tail := m.bin[2:]
 
 	result = append(result, head...)
-	size, _ := serde.SerializeNumber(len(tail))
+	size, _ := SerializeNumber(len(tail))
 	result = append(result, size...)
 	result = append(result, tail...)
 
@@ -69,6 +86,13 @@ func (m Module) Compile() ([]byte, error) {
 func (m *Module) NextPointer() int {
 	p := m.pointer
 	m.pointer++
+
+	return p
+}
+
+func (m *Module) next_pointer() int {
+	p := m.internal_pointer
+	m.internal_pointer++
 
 	return p
 }
@@ -132,13 +156,16 @@ func (m *Module) LoadParam(index int) {
 
 func NewModule(name string, is_entry bool) Module {
 	mod := Module{
-		Name:    name,
-		IsEntry: is_entry,
-		bin:     []byte{},
-		pointer: 100,
+		Name:             name,
+		IsEntry:          is_entry,
+		bin:              []byte{},
+		pointer:          100,
+		internal_pointer: 10,
+		Builtins:         map[string]int{},
 	}
 
 	mod.bin = append(mod.bin, define_module(name, is_entry)...)
+	generate_builtins(&mod)
 
 	return mod
 }

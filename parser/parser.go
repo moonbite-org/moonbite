@@ -133,7 +133,7 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 	p.skip_whitespace()
 	result := StatementList{}
 
-	allowed := []token_kind{var_keyword, const_keyword, for_keyword, match_keyword, if_keyword, identifier, right_curly_bracks, single_line_comment, multi_line_comment, assignment, arithmetic_assignment}
+	allowed := []token_kind{var_keyword, const_keyword, for_keyword, match_keyword, if_keyword, identifier, right_curly_bracks, single_line_comment, multi_line_comment, assignment, arithmetic_assignment, hidden_keyword}
 	allowed = append(allowed, p.body_context...)
 
 	if p.is_this_context {
@@ -141,6 +141,10 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 	}
 
 	token := p.might_only_expect(allowed)
+
+	if token.Kind == hidden_keyword {
+		p.must_expect([]token_kind{})
+	}
 
 	switch token.Kind {
 	case var_keyword, const_keyword:
@@ -1061,6 +1065,17 @@ func (p *parser_s) continue_expression() Expression {
 		} else {
 			return p.parse_call_expression()
 		}
+	case left_curly_bracks:
+		p.set_current_expression(p.parse_literal_expression())
+
+		is_ended := p.might_expect([]token_kind{whitespace, new_line})
+
+		if is_ended != nil {
+			p.skip_whitespace()
+			return p.current_expression()
+		}
+
+		return p.continue_expression()
 	case left_angle_bracks, right_angle_bracks, binary_operator:
 		return p.parse_binary_expression()
 	case plus, minus, star, forward_slash:
@@ -1073,6 +1088,15 @@ func (p *parser_s) continue_expression() Expression {
 		return p.parse_match_expression()
 	case fun_keyword:
 		return p.parse_anonymous_fun_expression()
+	case caret:
+		if p.current_expression() != nil {
+			p.must_expect([]token_kind{})
+		}
+		p.advance()
+		p.set_current_expression(CaretExpression{})
+		return p.continue_expression()
+	case or_keyword:
+		return p.parse_or_expression()
 	case cardinal_literal:
 		defer p.advance()
 		p.must_expect([]token_kind{})
@@ -1177,6 +1201,30 @@ func (p *parser_s) parse_member_expression() Expression {
 	p.set_current_expression(MemberExpression{
 		LeftHandSide:  p.current_expression(),
 		RightHandSide: *rhs,
+	})
+
+	return p.continue_expression()
+}
+
+func (p *parser_s) parse_or_expression() Expression {
+	defer p.catch()
+
+	if p.current_expression() == nil {
+		// if current expression is non-existent, the next lines will expect an identifier and it will throw
+		p.backup()
+	}
+
+	p.skip_whitespace()
+	p.must_expect([]token_kind{or_keyword})
+	p.must_expect([]token_kind{whitespace, new_line})
+	p.skip_whitespace()
+
+	rhs := p.parse_expression()
+
+	p.set_current_expression(OrExpression{
+		LeftHandSide:  p.current_expression(),
+		RightHandSide: rhs,
+		location:      p.current_expression().Location(),
 	})
 
 	return p.continue_expression()
@@ -1361,6 +1409,21 @@ func (p *parser_s) parse_type_cast_expression() Expression {
 	return p.continue_expression()
 }
 
+func (p *parser_s) parse_key_value_entry() KeyValueEntry {
+	key := p.must_expect([]token_kind{identifier})
+	p.skip_whitespace()
+	p.skip_comment()
+	p.must_expect([]token_kind{colon})
+	p.skip_whitespace()
+	p.skip_comment()
+	value := p.parse_expression()
+
+	return KeyValueEntry{
+		Key:   p.create_ident(key),
+		Value: value,
+	}
+}
+
 func (p *parser_s) parse_literal_expression() LiteralExpression {
 	defer p.catch()
 
@@ -1407,6 +1470,18 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 		result = ListLiteralExpression{
 			Value:    entries,
 			location: current.Location,
+		}
+	case left_curly_bracks:
+		typ := TypeIdentifier{
+			Name:     p.current_expression(),
+			Generics: []TypeLiteral{},
+		}
+		entries := parse_seperated_list(p, p.parse_key_value_entry, comma, left_curly_bracks, right_curly_bracks, true, true)
+
+		result = InstanceLiteralExpression{
+			Type:     typ,
+			Value:    entries,
+			location: typ.Name.Location(),
 		}
 	default:
 		result = StringLiteralExpression{

@@ -1,31 +1,13 @@
-package serde
+package compiler
 
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"reflect"
-)
 
-var TypeMap = map[string]byte{
-	"false":      10,
-	"true":       11,
-	"string":     12,
-	"rune":       13,
-	"int8":       14,
-	"int16":      15,
-	"int32":      16,
-	"int64":      17,
-	"uint8":      18,
-	"uint16":     19,
-	"uint32":     20,
-	"uint64":     21,
-	"float32":    22,
-	"float64":    23,
-	"list":       24,
-	"struct":     25,
-	"fun":        26,
-	"terminator": 0,
-}
+	"github.com/moonbite-org/moonbite/common"
+)
 
 func SerializeValue(value interface{}) ([]byte, error) {
 	switch reflect.TypeOf(value).Kind() {
@@ -39,30 +21,30 @@ func SerializeValue(value interface{}) ([]byte, error) {
 		return SerializeNumber(value)
 	case reflect.Map:
 		return SerializeStruct(value.(map[string]interface{}))
+	default:
+		return []byte{}, fmt.Errorf("unsupported type")
 	}
-
-	return []byte{}, nil
 }
 
 func SerializeBool(value bool) []byte {
 	if value {
-		return []byte{TypeMap["true"]}
+		return []byte{common.TypeMap["true"]}
 	}
 
-	return []byte{TypeMap["false"]}
+	return []byte{common.TypeMap["false"]}
 }
 
 func SerializeString(value string) []byte {
-	result := []byte{TypeMap["string"]}
+	result := []byte{common.TypeMap["string"]}
 	result = append(result, []byte(value)...)
-	result = append(result, TypeMap["terminator"])
+	result = append(result, common.TypeMap["terminator"])
 	return result
 }
 
 func SerializeRune(value rune) []byte {
-	result := []byte{TypeMap["rune"]}
+	result := []byte{common.TypeMap["rune"]}
 	result = append(result, []byte(string(value))...)
-	result = append(result, TypeMap["terminator"])
+	result = append(result, common.TypeMap["terminator"])
 	return result
 }
 
@@ -71,28 +53,28 @@ func SerializeNumber(value any) ([]byte, error) {
 
 	switch reflect.TypeOf(value).Kind() {
 	case reflect.Int8:
-		result = append(result, TypeMap["int8"])
+		result = append(result, common.TypeMap["int8"])
 	case reflect.Int16:
-		result = append(result, TypeMap["int16"])
+		result = append(result, common.TypeMap["int16"])
 	case reflect.Int:
 		value = int32(value.(int))
-		result = append(result, TypeMap["int32"])
+		result = append(result, common.TypeMap["int32"])
 	case reflect.Int32:
-		result = append(result, TypeMap["int32"])
+		result = append(result, common.TypeMap["int32"])
 	case reflect.Int64:
-		result = append(result, TypeMap["int64"])
+		result = append(result, common.TypeMap["int64"])
 	case reflect.Uint8:
-		result = append(result, TypeMap["uint8"])
+		result = append(result, common.TypeMap["uint8"])
 	case reflect.Uint16:
-		result = append(result, TypeMap["uint16"])
+		result = append(result, common.TypeMap["uint16"])
 	case reflect.Uint32:
-		result = append(result, TypeMap["uint32"])
+		result = append(result, common.TypeMap["uint32"])
 	case reflect.Uint64:
-		result = append(result, TypeMap["uint64"])
+		result = append(result, common.TypeMap["uint64"])
 	case reflect.Float32:
-		result = append(result, TypeMap["float32"])
+		result = append(result, common.TypeMap["float32"])
 	case reflect.Float64:
-		result = append(result, TypeMap["float64"])
+		result = append(result, common.TypeMap["float64"])
 	}
 
 	buffer := bytes.Buffer{}
@@ -108,42 +90,42 @@ func SerializeNumber(value any) ([]byte, error) {
 }
 
 func SerializeList(value []interface{}) ([]byte, error) {
-	result := []byte{TypeMap["list"]}
+	result := []byte{common.TypeMap["list"]}
 
 	for _, v := range value {
 		val, err := SerializeValue(v)
 
 		if err != nil {
-			return []byte{TypeMap["list"], TypeMap["terminator"]}, err
+			return []byte{common.TypeMap["list"], common.TypeMap["terminator"]}, err
 		}
 
 		result = append(result, val...)
 	}
 
-	result = append(result, TypeMap["terminator"])
+	result = append(result, common.TypeMap["terminator"])
 	return result, nil
 }
 
 func SerializeStruct(value map[string]interface{}) ([]byte, error) {
-	result := []byte{TypeMap["struct"]}
+	result := []byte{common.TypeMap["struct"]}
 
 	for key, v := range value {
 		result = append(result, SerializeString(key)...)
 		val, err := SerializeValue(v)
 
 		if err != nil {
-			return []byte{TypeMap["struct"], TypeMap["terminator"]}, err
+			return []byte{common.TypeMap["struct"], common.TypeMap["terminator"]}, err
 		}
 
 		result = append(result, val...)
 	}
 
-	result = append(result, TypeMap["terminator"])
+	result = append(result, common.TypeMap["terminator"])
 	return result, nil
 }
 
 func SerializeFunction() ([]byte, error) {
-	result := []byte{TypeMap["fun"], 0, TypeMap["terminator"]}
+	result := []byte{common.TypeMap["fun"], 0, common.TypeMap["terminator"]}
 
 	return result, nil
 }
