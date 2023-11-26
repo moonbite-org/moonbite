@@ -817,7 +817,7 @@ func (e RecordLiteralExpression) Location() Location {
 }
 
 type InstanceLiteralExpression struct {
-	Type     TypeIdentifier  `json:"tpye"`
+	Type     TypeIdentifier  `json:"type"`
 	Value    []KeyValueEntry `json:"value"`
 	location Location
 }

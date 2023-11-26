@@ -159,6 +159,10 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 		p.backup()
 		result = append(result, p.parse_return_statement())
 		result = append(result, p.parse_inline_level_statements()...)
+	case if_keyword:
+		p.backup()
+		result = append(result, p.parse_if_statement())
+		result = append(result, p.parse_inline_level_statements()...)
 	case yield_keyword:
 		p.backup()
 		result = append(result, p.parse_yield_statement())
@@ -246,6 +250,57 @@ func (p *parser_s) parse_use_statement() UseStatement {
 	}
 
 	return statement
+}
+
+func (p *parser_s) parse_if_statement() IfStatement {
+	defer p.catch()
+
+	start := p.must_expect([]token_kind{if_keyword})
+	p.skip_whitespace()
+
+	main_block := p.parse_predicate_block()
+	p.skip_whitespace()
+	p.skip_comment()
+
+	else_if_blocks := []PredicateBlock{}
+	else_block := StatementList{}
+
+	current := p.current_token()
+	for current.Kind == else_keyword {
+		p.advance()
+		p.must_expect([]token_kind{whitespace, new_line})
+		skipped := p.skip_whitespace()
+		skipped += p.skip_comment()
+		is_else_if := p.might_expect([]token_kind{if_keyword})
+
+		if is_else_if != nil {
+			p.skip_whitespace()
+			p.skip_comment()
+			else_if_blocks = append(else_if_blocks, p.parse_predicate_block())
+			current = p.current_token()
+		} else {
+			p.backup_by(skipped + 2)
+			break
+		}
+	}
+
+	is_else := p.might_expect([]token_kind{else_keyword})
+
+	if is_else != nil {
+		p.skip_whitespace()
+		p.skip_comment()
+		last := p.body_context
+		p.body_context = predicate_body_context
+		else_block = p.parse_block()
+		p.body_context = last
+	}
+
+	return IfStatement{
+		MainBlock:    main_block,
+		ElseIfBlocks: else_if_blocks,
+		ElseBlock:    else_block,
+		location:     start.Location,
+	}
 }
 
 func (p *parser_s) parse_declaration_statement() DeclarationStatement {
@@ -473,9 +528,10 @@ func (p *parser_s) parse_loop_statement() LoopStatement {
 	result.Predicate = p.parse_loop_predicate()
 	p.must_expect([]token_kind{right_parens})
 	p.skip_whitespace()
+	last := p.body_context
 	p.body_context = loop_context
 	result.Body = p.parse_block()
-	p.body_context = []token_kind{}
+	p.body_context = last
 
 	return result
 }
@@ -926,9 +982,10 @@ func (p *parser_s) parse_fun_definition_statement() FunDefinitionStatement {
 	if reflect.TypeOf(definition) == reflect.TypeOf(&BoundFunDefinitionStatement{}) {
 		p.is_this_context = true
 	}
+	last := p.body_context
 	p.body_context = function_context
 	definition.set_body(p.parse_block())
-	p.body_context = []token_kind{}
+	p.body_context = last
 	p.is_this_context = false
 
 	return definition
@@ -1022,6 +1079,12 @@ func (p *parser_s) continue_expression() Expression {
 	switch p.current_token().Kind {
 	case rune_literal, string_literal, bool_literal, number_literal:
 		p.set_current_expression(p.parse_literal_expression())
+
+		is_ended := p.might_expect([]token_kind{whitespace, new_line})
+
+		if is_ended != nil {
+			return p.current_expression()
+		}
 		return p.continue_expression()
 	case identifier:
 		ident := p.create_ident(p.current_token())
@@ -1066,12 +1129,16 @@ func (p *parser_s) continue_expression() Expression {
 			return p.parse_call_expression()
 		}
 	case left_curly_bracks:
-		p.set_current_expression(p.parse_literal_expression())
+		current := p.current_expression()
 
+		if reflect.TypeOf(current) != reflect.TypeOf(IdentifierExpression{}) && reflect.TypeOf(current) != reflect.TypeOf(MemberExpression{}) {
+			p.must_expect([]token_kind{})
+		}
+
+		p.set_current_expression(p.parse_literal_expression())
 		is_ended := p.might_expect([]token_kind{whitespace, new_line})
 
 		if is_ended != nil {
-			p.skip_whitespace()
 			return p.current_expression()
 		}
 
@@ -1104,6 +1171,11 @@ func (p *parser_s) continue_expression() Expression {
 	case left_squre_bracks:
 		if p.current_expression() == nil {
 			p.set_current_expression(p.parse_literal_expression())
+			is_ended := p.might_expect([]token_kind{whitespace, new_line})
+
+			if is_ended != nil {
+				return p.current_expression()
+			}
 			return p.continue_expression()
 		} else {
 			return p.parse_index_expression()
@@ -1142,9 +1214,10 @@ func (p *parser_s) parse_anonymous_fun_expression() Expression {
 		location:  signature.location,
 	}
 	p.skip_whitespace()
+	last := p.body_context
 	p.body_context = function_context
 	result.Body = p.parse_block()
-	p.body_context = []token_kind{}
+	p.body_context = last
 
 	p.set_current_expression(result)
 
@@ -1497,16 +1570,19 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 func (p *parser_s) parse_predicate_block() PredicateBlock {
 	defer p.catch()
 
+	p.must_expect([]token_kind{left_parens})
 	predicate := p.parse_expression()
+	p.must_expect([]token_kind{right_parens})
 
 	if predicate == nil {
 		p.must_expect([]token_kind{})
 	}
 
 	p.skip_whitespace()
+	last := p.body_context
 	p.body_context = predicate_body_context
 	body := p.parse_block()
-	p.body_context = []token_kind{}
+	p.body_context = last
 
 	return PredicateBlock{
 		Predicate: predicate,

@@ -14,11 +14,11 @@ func main() {
 	input, _ := os.ReadFile(p)
 
 	start := time.Now()
-	ast, err := parser.Parse(input, p)
+	ast, p_err := parser.Parse(input, p)
 	fmt.Println(time.Since(start))
 
-	if err.Exists {
-		fmt.Println("There is an error", err)
+	if p_err.Exists {
+		fmt.Println("There is an error", p_err)
 	}
 
 	data, _ := json.MarshalIndent(&ast, "", "  ")
@@ -35,7 +35,7 @@ func main() {
 	// result, err := bin.Compile()
 
 	// if err != nil {
-	// 	panic(err)
+	// 	panic(p_err)
 	// }
 
 	// fmt.Println(result)
