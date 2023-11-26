@@ -50,12 +50,6 @@ func (p *parser_s) advance() {
 	p.offset++
 }
 
-// func (p *parser_s) advance_by(n int) {
-// 	if p.offset+n <= len(p.tokens) {
-// 		p.offset += n
-// 	}
-// }
-
 func (p *parser_s) backup() {
 	p.offset--
 }
@@ -65,34 +59,6 @@ func (p *parser_s) backup_by(n int) {
 		p.offset -= n
 	}
 }
-
-// func (p parser_s) next_token() Token {
-// 	if p.offset+1 >= len(p.tokens) {
-// 		return Token{
-// 			Kind: eof_token_kind,
-// 		}
-// 	}
-
-// 	return p.tokens[p.offset+1]
-// }
-
-// func (p *parser_s) next_tokens(amount int) []Token {
-// 	result := []Token{}
-
-// 	for i := 0; i < amount; i++ {
-// 		result = append(result, p.next_token())
-// 		p.advance()
-// 	}
-
-// 	p.backup_by(amount)
-
-// 	return result
-// }
-
-// func (p *parser_s) peek(at int) Token {
-// 	tokens := p.next_tokens(at)
-// 	return tokens[len(tokens)-1]
-// }
 
 func (p *parser_s) skip_whitespace() int {
 	count := 0

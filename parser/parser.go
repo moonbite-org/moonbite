@@ -6,6 +6,7 @@ import (
 	"reflect"
 )
 
+// extra allowed keywords inside code blocks
 var function_context = []token_kind{return_keyword, yield_keyword}
 var loop_context = []token_kind{return_keyword, break_keyword, continue_keyword}
 var predicate_body_context = []token_kind{return_keyword}
