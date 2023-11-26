@@ -3,58 +3,57 @@ package formatter
 import (
 	"strings"
 
-	"github.com/CanPacis/tokenizer/parser"
+	"github.com/moonbite-org/moonbite/parser"
 )
 
-func NewFormatter(ast parser.Ast) Formatter {
-	return Formatter{
-		ast:      ast,
-		Result:   "",
-		new_line: "\n",
-		tab:      "  ",
-	}
-}
+const space = " "
+const new_line = "\n"
 
-type printable interface {
-	String() string
+type FormatConfig struct {
+	Tabsize int
 }
-
 type Formatter struct {
-	ast      parser.Ast
-	Result   string
-	new_line string
-	tab      string
+	Ast    parser.Ast
+	Config FormatConfig
+	Result string
 }
 
-func (f *Formatter) add_new_line() {
-	f.Result += f.new_line
-}
+func (f Formatter) tab() string {
+	result := ""
 
-func (f *Formatter) trim() {
-	f.Result = strings.TrimSpace(f.Result)
-}
-
-func new_line_list[T printable](f *Formatter, items []T, seperation int) {
-	seperator := ""
-
-	for i := 0; i < seperation; i++ {
-		seperator += f.new_line
+	for i := 0; i < f.Config.Tabsize; i++ {
+		result += space
 	}
 
-	for _, item := range items {
-		f.Result += seperator
-		f.Result += item.String()
-	}
+	return result
 }
 
 func (f *Formatter) Format() {
-	f.Result += f.ast.Package.String()
-	f.add_new_line()
+	f.Result += FormatPackageStatement(f.Ast.Package)
+	f.Result += new_line
+	f.Result += new_line
 
-	new_line_list(f, f.ast.Uses, 1)
-	new_line_list(f, f.ast.Definitions, 2)
-	f.add_new_line()
-	f.trim()
+	for _, use := range f.Ast.Uses {
+		f.Result += FormatUseStatement(use)
+		f.Result += new_line
+	}
+	f.Result += new_line
+
+	for _, definition := range f.Ast.Definitions {
+		f.Result += FormatStatement(definition.(parser.Statement))
+		f.Result += new_line
+	}
+
+	f.Result = strings.TrimSpace(f.Result)
+}
+
+func NewFormatter(ast parser.Ast) Formatter {
+	return Formatter{
+		Ast: ast,
+		Config: FormatConfig{
+			Tabsize: 2,
+		},
+	}
 }
 
 func Format(ast parser.Ast) string {

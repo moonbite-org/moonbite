@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -29,9 +30,10 @@ func (p *parser_s) throw(reason string) {
 }
 
 func (p *parser_s) catch() {
-	if r := recover(); r != nil {
-		panic(r)
-	}
+	// if r := recover(); r != nil {
+	// 	panic(r)
+	// }
+	recover()
 }
 
 func (p parser_s) current_token() Token {
@@ -96,6 +98,16 @@ func (p *parser_s) skip_whitespace() int {
 	count := 0
 	for p.current_token().Kind == whitespace || p.current_token().Kind == new_line {
 		p.advance()
+		count++
+	}
+	return count
+}
+
+func (p *parser_s) skip_comment() int {
+	count := 0
+	for p.current_token().Kind == single_line_comment || p.current_token().Kind == multi_line_comment {
+		p.advance()
+		count += p.skip_whitespace()
 		count++
 	}
 	return count
@@ -218,4 +230,31 @@ func parse_seperated_list[T any](p *parser_s, parser_func func() T, seperator to
 
 func (p *parser_s) create_ident(token Token) *IdentifierExpression {
 	return &IdentifierExpression{Value: token.Literal, location: token.Location}
+}
+
+func create_number_literal(p parser_s, literal string) NumberLiteral {
+	defer p.catch()
+
+	v, err := strconv.ParseFloat(literal, 32)
+
+	if err != nil {
+		p.throw(fmt.Sprintf(error_messages["i_val"], err.Error()))
+	}
+
+	if strings.Contains(literal, ".") {
+		return NumberLiteral{
+			Type: TypeIdentifier{
+				Name: IdentifierExpression{Value: "float32"},
+			},
+			Value: v,
+		}
+	}
+
+	return NumberLiteral{
+		Type: TypeIdentifier{
+			Name:     IdentifierExpression{Value: "int"},
+			Generics: []TypeLiteral{},
+		},
+		Value: int(v),
+	}
 }

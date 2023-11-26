@@ -1,3 +1,5 @@
+package main
+
 trait Saturable<T> {
   fun default() T
 }
@@ -13,7 +15,7 @@ fun for String length() Int {
   return length
 }
 
-static fun for String from_bytes(p List<Byte>) String {
+fun for String from_bytes(p List<Byte>) String {
   return btoa(p)
 }
 
@@ -29,15 +31,15 @@ fun for Int default() int {
 }
 
 type IteratorResult<T> {
-  value T
-  is_done Bool
+  value T;
+  is_done Bool;
 }
 
 trait Iterable<T> {
   fun next() IteratorResult<T>
 }
 
-type List<T> implements [Saturable<T[]>, Iterable<T>] T[]
+type List<T> implements [Saturable<Iterable<T>>, Iterable<T>] Iterable<T>
 
 fun for List default() List<T> {
   return []
@@ -102,7 +104,7 @@ fun for Stdout read(p List<Byte>) Int {
 }
 
 type Os {
-  stdout Stdout
+  stdout Stdout;
 }
 
 const os = Os{
@@ -157,7 +159,7 @@ fun for Json decode() T {
   var t = T{} 
   json_decode(this, t) or warn(^)
   return t
-} ParseWarning
+}
 
 trait Observable<T> {
   fun on_declared()
@@ -210,8 +212,8 @@ fun main() {
 }
 
 type User {
-  first_name String
-  last_name String
+  first_name String;
+  last_name String;
 }
 
 const name = "outer scope var"
@@ -234,20 +236,20 @@ fun update_user(user Reference<User>) {
 type UserKind String("user") | String("admin")
 
 type User {
-  first_name String
-  last_name String
-  age Int
-  kind UserKind
+  first_name String;
+  last_name String;
+  age Int;
+  kind UserKind;
 }
 
 type AdminUser User({
-  kind String("admin")
+  kind String("admin");
 })
 
 type Todo {
-  id Int
-  label String
-  author User
+  id Int;
+  label String;
+  author User;
 }
 
 

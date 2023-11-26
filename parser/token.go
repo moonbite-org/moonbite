@@ -40,7 +40,7 @@ const (
 	ampersand
 	assignment
 	arithmetic_assignment
-	binary_predicate // == != < > <= >=
+	binary_operator // == != < > <= >= && ||
 	caret
 	channel
 	then
@@ -64,6 +64,7 @@ const (
 	else_keyword
 	for_keyword
 	fun_keyword
+	hidden_keyword
 	if_keyword
 	implements_keyword
 	instanceof_keyword
@@ -117,7 +118,7 @@ var token_map = map[token_kind]string{
 	ampersand:             "Ampersand",
 	assignment:            "Assignment",
 	arithmetic_assignment: "ArithmeticAssignment",
-	binary_predicate:      "BinaryPredicate", // == != < > <= >=
+	binary_operator:       "BinaryPredicate", // == != < > <= >=
 	caret:                 "Caret",
 	channel:               "Channel",
 	then:                  "Then",
@@ -141,6 +142,7 @@ var token_map = map[token_kind]string{
 	else_keyword:       "ElseKeyword",
 	for_keyword:        "ForKeyword",
 	fun_keyword:        "FunKeyword",
+	hidden_keyword:     "HiddenKeyword",
 	if_keyword:         "IfKeyword",
 	implements_keyword: "ImplementsKeyword",
 	instanceof_keyword: "InstanceofKeyword",

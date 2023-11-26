@@ -1,55 +1,59 @@
 package parser
 
-import (
-	"fmt"
-	"strings"
-)
-
 type statement_kind string
 type expression_kind string
 type type_kind string
 type var_kind string
 type loop_kind string
 type literal_kind string
+type stepped_change_operation_kind string
 
 const (
 	// statements
-	package_statement                statement_kind = "statement:package"
-	use_statement                    statement_kind = "statement:use"
-	return_statement                 statement_kind = "statement:return"
-	declaration_statement            statement_kind = "statement:declaration"
-	type_definition_statement        statement_kind = "statement:type-definition"
-	trait_definition_statement       statement_kind = "statement:trait-definition"
-	unbound_fun_definition_statement statement_kind = "statement:unbound-fun-definition"
-	bound_fun_definition_statement   statement_kind = "statement:bound-fun-definition"
-	expression_statement             statement_kind = "statement:expression"
-	loop_statement                   statement_kind = "statement:loop"
-	if_statement                     statement_kind = "statement:if"
-	or_statement                     statement_kind = "statement:or"
-	single_line_comment_statement    statement_kind = "statement:single_line_comment"
-	multi_line_comment_statement     statement_kind = "statement:multi_line_comment"
+	PackageStatementKind              statement_kind = "statement:package"
+	UseStatementKind                  statement_kind = "statement:use"
+	ReturnStatementKind               statement_kind = "statement:return"
+	BreakStatementKind                statement_kind = "statement:break"
+	ContinueStatementKind             statement_kind = "statement:continue"
+	YieldStatementKind                statement_kind = "statement:yield"
+	DeclarationStatementKind          statement_kind = "statement:declaration"
+	AssignmentStatementKind           statement_kind = "statement:assignment"
+	TypeDefinitionStatementKind       statement_kind = "statement:type-definition"
+	TraitDefinitionStatementKind      statement_kind = "statement:trait-definition"
+	UnboundFunDefinitionStatementKind statement_kind = "statement:unbound-fun-definition"
+	BoundFunDefinitionStatementKind   statement_kind = "statement:bound-fun-definition"
+	ExpressionStatementKind           statement_kind = "statement:expression"
+	LoopStatementKind                 statement_kind = "statement:loop"
+	IfStatementKind                   statement_kind = "statement:if"
+	OrStatementKind                   statement_kind = "statement:or"
+	SingleLineCommentStatementKind    statement_kind = "statement:single_line_comment"
+	MultiLineCommentStatementKind     statement_kind = "statement:multi_line_comment"
 
 	// expressions
-	identifier_expression expression_kind = "expression:identifier"
-	arithmetic_expression expression_kind = "expression:arithmetic"
-	binary_expression     expression_kind = "expression:binary"
-	call_expression       expression_kind = "expression:call"
-	member_expression     expression_kind = "expression:member"
-	match_expression      expression_kind = "expression:match"
-	type_cast_expression  expression_kind = "expression:type-cast"
-	caret_expression      expression_kind = "expression:caret"
-	instanceof_expression expression_kind = "expression:instanceof"
-	match_self_expression expression_kind = "expression:match_self"
-	group_expression      expression_kind = "expression:group"
+	IdentifierExpressionKind    expression_kind = "expression:identifier"
+	ArithmeticExpressionKind    expression_kind = "expression:arithmetic"
+	BinaryExpressionKind        expression_kind = "expression:binary"
+	CallExpressionKind          expression_kind = "expression:call"
+	MemberExpressionKind        expression_kind = "expression:member"
+	IndexExpressionKind         expression_kind = "expression:index"
+	MatchExpressionKind         expression_kind = "expression:match"
+	TypeCastExpressionKind      expression_kind = "expression:type-cast"
+	CaretExpressionKind         expression_kind = "expression:caret"
+	InstanceofExpressionKind    expression_kind = "expression:instanceof"
+	MatchSelfExpressionKind     expression_kind = "expression:match_self"
+	GroupExpressionKind         expression_kind = "expression:group"
+	ThisExpressionKind          expression_kind = "expression:this"
+	SteppedChangeExpressionKind expression_kind = "expression:stepped_change"
+	AnonymousFunExpressionKind  expression_kind = "expression:anonymous_fun"
 
 	// literal expressions
-	string_literal_expression   expression_kind = "expression:string-literal"
-	rune_literal_expression     expression_kind = "expression:rune-literal"
-	bool_literal_expression     expression_kind = "expression:bool-literal"
-	number_literal_expression   expression_kind = "expression:number-literal"
-	list_literal_expression     expression_kind = "expression:list-literal"
-	record_literal_expression   expression_kind = "expression:record-literal"
-	instance_literal_expression expression_kind = "expression:instance-literal"
+	StringLiteralExpressionKind   expression_kind = "expression:string-literal"
+	RuneLiteralExpressionKind     expression_kind = "expression:rune-literal"
+	BoolLiteralExpressionKind     expression_kind = "expression:bool-literal"
+	NumberLiteralExpressionKind   expression_kind = "expression:number-literal"
+	ListLiteralExpressionKind     expression_kind = "expression:list-literal"
+	RecordLiteralExpressionKind   expression_kind = "expression:record-literal"
+	InstanceLiteralExpressionKind expression_kind = "expression:instance-literal"
 
 	// types
 	type_identifier type_kind = "type:type-identifier"
@@ -57,73 +61,60 @@ const (
 	operated_type   type_kind = "type:operated-type"
 	typed_literal   type_kind = "type:typed-literal"
 	group_type      type_kind = "type:group"
+	fun_type        type_kind = "type:fun"
 
 	// vars
-	variable var_kind = "var"
-	constant var_kind = "const"
+	VariableKind var_kind = "var"
+	ConstantKind var_kind = "const"
 
 	// loops
-	unipartite_loop loop_kind = "predicate:unipartite"
-	bipartite_loop  loop_kind = "predicate:bipartite"
-	tripartite_loop loop_kind = "predicate:tripartite"
+	UnipartiteLoopKind loop_kind = "predicate:unipartite"
+	BipartiteLoopKind  loop_kind = "predicate:bipartite"
+	TripartiteLoopKind loop_kind = "predicate:tripartite"
 
 	// literals
-	string_literal_kind   literal_kind = "literal:string"
-	bool_literal_kind     literal_kind = "literal:bool"
-	rune_literal_kind     literal_kind = "literal:rune"
-	number_literal_kind   literal_kind = "literal:number"
-	list_literal_kind     literal_kind = "literal:list"
-	record_literal_kind   literal_kind = "literal:record"
-	instance_literal_kind literal_kind = "literal:instance"
+	StringLiteralKind   literal_kind = "literal:string"
+	BoolLiteralKind     literal_kind = "literal:bool"
+	RuneLiteralKind     literal_kind = "literal:rune"
+	NumberLiteralKind   literal_kind = "literal:number"
+	ListLiteralKind     literal_kind = "literal:list"
+	RecordLiteralKind   literal_kind = "literal:record"
+	InstanceLiteralKind literal_kind = "literal:instance"
+
+	// stepped change operation
+	increment_kind stepped_change_operation_kind = "stepped:increment"
+	decrement_kind stepped_change_operation_kind = "stepped:decrement"
 )
 
-const tab = "    "
+// func stringify_list[T printable](items []T, open, close string, keepempty bool, seperator string) string {
+// 	result := []string{}
+// 	literal := ""
 
-type printable interface {
-	String() string
-}
+// 	for _, item := range items {
+// 		result = append(result, item.String())
+// 	}
 
-func stringify_list[T printable](items []T, open, close string, keepempty bool, seperator string) string {
-	result := []string{}
-	literal := ""
+// 	if len(items) != 0 {
+// 		literal += open
+// 		literal += strings.Join(result, seperator)
+// 		literal += close
+// 	} else {
+// 		if keepempty {
+// 			literal += open
+// 			literal += close
+// 		}
+// 	}
 
-	for _, item := range items {
-		result = append(result, item.String())
-	}
-
-	if len(items) != 0 {
-		literal += open
-		literal += strings.Join(result, seperator)
-		literal += close
-	} else {
-		if keepempty {
-			literal += open
-			literal += close
-		}
-	}
-
-	return literal
-}
+// 	return literal
+// }
 
 type ConstrainedType struct {
 	Name       Expression   `json:"name"`
 	Constraint *TypeLiteral `json:"constraint"`
 }
 
-func (t ConstrainedType) String() string {
-	c := ""
-
-	if t.Constraint != nil {
-		_c := *t.Constraint
-		c = fmt.Sprintf(" %s", _c.String())
-	}
-
-	return fmt.Sprintf("%s%s", t.Name.String(), c)
-}
-
 type TypeLiteral interface {
-	Kind() type_kind
-	printable
+	TypeKind() type_kind
 }
 
 type TypedLiteral struct {
@@ -131,24 +122,16 @@ type TypedLiteral struct {
 	Literal LiteralExpression `json:"literal"`
 }
 
-func (t TypedLiteral) Kind() type_kind {
+func (t TypedLiteral) TypeKind() type_kind {
 	return typed_literal
-}
-
-func (t TypedLiteral) String() string {
-	return fmt.Sprintf("%s(%s)", t.Type.String(), t.Literal.String())
 }
 
 type GroupType struct {
 	Type TypeLiteral `json:"type"`
 }
 
-func (t GroupType) Kind() type_kind {
+func (t GroupType) TypeKind() type_kind {
 	return group_type
-}
-
-func (t GroupType) String() string {
-	return fmt.Sprintf("(%s)", t.Type.String())
 }
 
 type TypeIdentifier struct {
@@ -156,12 +139,8 @@ type TypeIdentifier struct {
 	Generics []TypeLiteral `json:"generics"`
 }
 
-func (t TypeIdentifier) Kind() type_kind {
+func (t TypeIdentifier) TypeKind() type_kind {
 	return type_identifier
-}
-
-func (t TypeIdentifier) String() string {
-	return fmt.Sprintf("%s%s", t.Name.String(), stringify_list(t.Generics, "<", ">", false, ", "))
 }
 
 type OperatedType struct {
@@ -170,12 +149,8 @@ type OperatedType struct {
 	Operator      string
 }
 
-func (t OperatedType) Kind() type_kind {
+func (t OperatedType) TypeKind() type_kind {
 	return operated_type
-}
-
-func (t OperatedType) String() string {
-	return fmt.Sprintf("%s %s %s", t.LeftHandSide.String(), t.Operator, t.RightHandSide.String())
 }
 
 type ValueTypePair struct {
@@ -185,22 +160,8 @@ type ValueTypePair struct {
 
 type StructLiteral []ValueTypePair
 
-func (t StructLiteral) Kind() type_kind {
+func (t StructLiteral) TypeKind() type_kind {
 	return struct_literal
-}
-
-func (t StructLiteral) String() string {
-	if len(t) == 0 {
-		return "{}"
-	}
-
-	result := ""
-
-	for _, entry := range t {
-		result += fmt.Sprintf("%s%s %s;\n", tab, entry.Key.String(), entry.Type.String())
-	}
-
-	return fmt.Sprintf("{\n%s}", result)
 }
 
 type TypedParameter struct {
@@ -208,12 +169,23 @@ type TypedParameter struct {
 	Type TypeLiteral          `json:"type"`
 }
 
-func (p TypedParameter) String() string {
-	return fmt.Sprintf("%s %s", p.Name.String(), p.Type.String())
-}
-
 type FunctionSignature interface {
 	is_fun_signature() bool
+}
+
+type AnonymousFunctionSignature struct {
+	Parameters []TypedParameter  `json:"parameters"`
+	Generics   []ConstrainedType `json:"generics"`
+	ReturnType *TypeLiteral      `json:"return_type"`
+	location   Location
+}
+
+func (s AnonymousFunctionSignature) is_fun_signature() bool {
+	return true
+}
+
+func (s AnonymousFunctionSignature) TypeKind() type_kind {
+	return fun_type
 }
 
 type UnboundFunctionSignature struct {
@@ -222,17 +194,6 @@ type UnboundFunctionSignature struct {
 	Generics   []ConstrainedType    `json:"generics"`
 	ReturnType *TypeLiteral         `json:"return_type"`
 	location   Location
-}
-
-func (s UnboundFunctionSignature) String() string {
-	r_type := ""
-
-	if s.ReturnType != nil {
-		rt := *s.ReturnType
-		r_type = fmt.Sprintf(" %s", rt.String())
-	}
-
-	return fmt.Sprintf("fun %s%s%s%s", s.Name.String(), stringify_list(s.Generics, "<", ">", false, ", "), stringify_list(s.Parameters, "(", ")", true, ", "), r_type)
 }
 
 func (s UnboundFunctionSignature) is_fun_signature() bool {
@@ -248,17 +209,6 @@ type BoundFunctionSignature struct {
 	location   Location
 }
 
-func (s BoundFunctionSignature) String() string {
-	r_type := ""
-
-	if s.ReturnType != nil {
-		rt := *s.ReturnType
-		r_type = fmt.Sprintf(" %s", rt.String())
-	}
-
-	return fmt.Sprintf("fun for %s %s%s%s%s", s.For.String(), s.Name.String(), stringify_list(s.Generics, "<", ">", false, ", "), stringify_list(s.Parameters, "(", ")", true, ", "), r_type)
-}
-
 func (s BoundFunctionSignature) is_fun_signature() bool {
 	return true
 }
@@ -266,24 +216,23 @@ func (s BoundFunctionSignature) is_fun_signature() bool {
 type Statement interface {
 	Kind() statement_kind
 	Location() Location
-	printable
 }
+
+type StatementList []Statement
 
 type Expression interface {
 	Kind() expression_kind
 	Location() Location
-	printable
 }
 
 type Definition interface {
 	is_definition() bool
-	printable
 }
 
 type Comment interface {
 	is_comment() bool
+	Statement
 	Definition
-	printable
 }
 
 type Ast struct {
@@ -303,11 +252,7 @@ type ExpressionStatement struct {
 }
 
 func (s ExpressionStatement) Kind() statement_kind {
-	return expression_statement
-}
-
-func (s ExpressionStatement) String() string {
-	return s.Expression.String()
+	return ExpressionStatementKind
 }
 
 func (s ExpressionStatement) Location() Location {
@@ -319,6 +264,7 @@ type DeclarationStatement struct {
 	Name     IdentifierExpression `json:"name"`
 	Type     *TypeLiteral         `json:"type"`
 	Value    *Expression          `json:"value"`
+	Hidden   bool                 `json:"hidden"`
 	location Location
 }
 
@@ -327,25 +273,25 @@ func (s DeclarationStatement) is_definition() bool {
 }
 
 func (s DeclarationStatement) Kind() statement_kind {
-	return declaration_statement
-}
-
-func (s DeclarationStatement) String() string {
-	typ := ""
-	val := ""
-
-	if s.Type != nil {
-		typ = fmt.Sprintf(" %s", (*s.Type).String())
-	}
-
-	if s.Value != nil {
-		val = (*s.Value).String()
-	}
-
-	return fmt.Sprintf("%s%s %s = %s", s.VarKind, typ, s.Name, val)
+	return DeclarationStatementKind
 }
 
 func (s DeclarationStatement) Location() Location {
+	return s.location
+}
+
+type AssignmentStatement struct {
+	LeftHandSide  Expression `json:"left_hand_side"`
+	RightHandSide Expression `json:"right_hand_side"`
+	Operator      string     `json:"operator"`
+	location      Location
+}
+
+func (s AssignmentStatement) Kind() statement_kind {
+	return AssignmentStatementKind
+}
+
+func (s AssignmentStatement) Location() Location {
 	return s.location
 }
 
@@ -355,11 +301,7 @@ type PackageStatement struct {
 }
 
 func (s PackageStatement) Kind() statement_kind {
-	return package_statement
-}
-
-func (s PackageStatement) String() string {
-	return fmt.Sprintf("package %s", s.Name.Value)
+	return PackageStatementKind
 }
 
 func (s PackageStatement) Location() Location {
@@ -373,17 +315,7 @@ type UseStatement struct {
 }
 
 func (s UseStatement) Kind() statement_kind {
-	return use_statement
-}
-
-func (s UseStatement) String() string {
-	postfix := ""
-
-	if s.As != nil {
-		postfix = fmt.Sprintf(" as %s", s.As.String())
-	}
-
-	return fmt.Sprintf("use %s%s", s.Resource.String(), postfix)
+	return UseStatementKind
 }
 
 func (s UseStatement) Location() Location {
@@ -395,6 +327,7 @@ type TypeDefinitionStatement struct {
 	Generics        []ConstrainedType    `json:"generics"`
 	Implementations []TypeIdentifier     `json:"implementations"`
 	Definition      TypeLiteral          `json:"definiton"`
+	Hidden          bool                 `json:"hidden"`
 	location        Location
 }
 
@@ -403,17 +336,7 @@ func (s TypeDefinitionStatement) is_definition() bool {
 }
 
 func (s TypeDefinitionStatement) Kind() statement_kind {
-	return type_definition_statement
-}
-
-func (s TypeDefinitionStatement) String() string {
-	implementations := stringify_list(s.Implementations, "[", "]", false, ", ")
-
-	if len(implementations) != 0 {
-		implementations = fmt.Sprintf(" implements %s", implementations)
-	}
-
-	return fmt.Sprintf("type %s%s%s %s", s.Name.String(), stringify_list(s.Generics, "<", ">", false, ", "), implementations, s.Definition)
+	return TypeDefinitionStatementKind
 }
 
 func (s TypeDefinitionStatement) Location() Location {
@@ -425,6 +348,7 @@ type TraitDefinitionStatement struct {
 	Generics   []ConstrainedType          `json:"generics"`
 	Mimics     []TypeIdentifier           `json:"mimics"`
 	Definition []UnboundFunctionSignature `json:"definition"`
+	Hidden     bool                       `json:"hidden"`
 	location   Location
 }
 
@@ -433,23 +357,7 @@ func (s TraitDefinitionStatement) is_definition() bool {
 }
 
 func (s TraitDefinitionStatement) Kind() statement_kind {
-	return trait_definition_statement
-}
-
-func (s TraitDefinitionStatement) String() string {
-	mimics := stringify_list(s.Mimics, "[", "]", false, ",")
-
-	if len(mimics) != 0 {
-		mimics = fmt.Sprintf(" mimics %s", mimics)
-	}
-
-	body := []string{}
-
-	for _, definition := range s.Definition {
-		body = append(body, fmt.Sprintf("%s%s;\n", tab, definition.String()))
-	}
-
-	return fmt.Sprintf("trait %s%s%s {\n%s}", s.Name.String(), stringify_list(s.Generics, "<", ">", false, ", "), mimics, strings.Join(body, ""))
+	return TraitDefinitionStatementKind
 }
 
 func (s TraitDefinitionStatement) Location() Location {
@@ -458,12 +366,14 @@ func (s TraitDefinitionStatement) Location() Location {
 
 type FunDefinitionStatement interface {
 	set_body(body []Statement)
+	Statement
 	Definition
 }
 
 type UnboundFunDefinitionStatement struct {
 	Signature UnboundFunctionSignature `json:"signature"`
-	Body      []Statement              `json:"body"`
+	Body      StatementList            `json:"body"`
+	Hidden    bool                     `json:"hidden"`
 	location  Location
 }
 
@@ -476,11 +386,7 @@ func (s *UnboundFunDefinitionStatement) set_body(body []Statement) {
 }
 
 func (s UnboundFunDefinitionStatement) Kind() statement_kind {
-	return unbound_fun_definition_statement
-}
-
-func (s UnboundFunDefinitionStatement) String() string {
-	return fmt.Sprintf("%s %s", s.Signature.String(), stringify_list(s.Body, "{", "}", true, "\n"))
+	return UnboundFunDefinitionStatementKind
 }
 
 func (s UnboundFunDefinitionStatement) Location() Location {
@@ -489,7 +395,8 @@ func (s UnboundFunDefinitionStatement) Location() Location {
 
 type BoundFunDefinitionStatement struct {
 	Signature BoundFunctionSignature `json:"signature"`
-	Body      []Statement            `json:"body"`
+	Body      StatementList          `json:"body"`
+	Hidden    bool                   `json:"hidden"`
 	location  Location
 }
 
@@ -502,11 +409,7 @@ func (s *BoundFunDefinitionStatement) set_body(body []Statement) {
 }
 
 func (s BoundFunDefinitionStatement) Kind() statement_kind {
-	return bound_fun_definition_statement
-}
-
-func (s BoundFunDefinitionStatement) String() string {
-	return fmt.Sprintf("%s %s", s.Signature.String(), stringify_list(s.Body, "{", "}", true, "\n"))
+	return BoundFunDefinitionStatementKind
 }
 
 func (s BoundFunDefinitionStatement) Location() Location {
@@ -519,21 +422,47 @@ type ReturnStatement struct {
 }
 
 func (s ReturnStatement) Kind() statement_kind {
-	return return_statement
-}
-
-func (s ReturnStatement) String() string {
-	end := ""
-
-	if *s.Value != nil {
-		v_p := *s.Value
-		end = fmt.Sprintf(" %s", v_p.String())
-	}
-
-	return fmt.Sprintf("return%s", end)
+	return ReturnStatementKind
 }
 
 func (s ReturnStatement) Location() Location {
+	return s.location
+}
+
+type YieldStatement struct {
+	Value    *Expression `json:"expression"`
+	location Location
+}
+
+func (s YieldStatement) Kind() statement_kind {
+	return YieldStatementKind
+}
+
+func (s YieldStatement) Location() Location {
+	return s.location
+}
+
+type BreakStatement struct {
+	location Location
+}
+
+func (s BreakStatement) Kind() statement_kind {
+	return BreakStatementKind
+}
+
+func (s BreakStatement) Location() Location {
+	return s.location
+}
+
+type ContinueStatement struct {
+	location Location
+}
+
+func (s ContinueStatement) Kind() statement_kind {
+	return ContinueStatementKind
+}
+
+func (s ContinueStatement) Location() Location {
 	return s.location
 }
 
@@ -546,7 +475,7 @@ type UnipartiteLoopPredicate struct {
 }
 
 func (l UnipartiteLoopPredicate) LoopKind() loop_kind {
-	return unipartite_loop
+	return UnipartiteLoopKind
 }
 
 type BipartiteLoopPredicate struct {
@@ -556,7 +485,7 @@ type BipartiteLoopPredicate struct {
 }
 
 func (l BipartiteLoopPredicate) LoopKind() loop_kind {
-	return bipartite_loop
+	return BipartiteLoopKind
 }
 
 type TripartiteLoopPredicate struct {
@@ -566,17 +495,17 @@ type TripartiteLoopPredicate struct {
 }
 
 func (l TripartiteLoopPredicate) LoopKind() loop_kind {
-	return tripartite_loop
+	return TripartiteLoopKind
 }
 
 type LoopStatement struct {
 	Predicate LoopPredicate `json:"predicate"`
-	Body      []Statement   `json:"body"`
+	Body      StatementList `json:"body"`
 	location  Location
 }
 
 func (s LoopStatement) Kind() statement_kind {
-	return loop_statement
+	return LoopStatementKind
 }
 
 func (s LoopStatement) Location() Location {
@@ -584,19 +513,19 @@ func (s LoopStatement) Location() Location {
 }
 
 type PredicateBlock struct {
-	Predicate Expression  `json:"predicate"`
-	Body      []Statement `json:"body"`
+	Predicate Expression    `json:"predicate"`
+	Body      StatementList `json:"body"`
 }
 
 type IfStatement struct {
 	MainBlock    PredicateBlock   `json:"main_block"`
 	ElseIfBlocks []PredicateBlock `json:"else_if_blocks"`
-	ElseBlock    []Statement      `json:"else_block"`
+	ElseBlock    StatementList    `json:"else_block"`
 	location     Location
 }
 
 func (s IfStatement) Kind() statement_kind {
-	return if_statement
+	return IfStatementKind
 }
 
 func (s IfStatement) Location() Location {
@@ -610,11 +539,7 @@ type OrStatement struct {
 }
 
 func (s OrStatement) Kind() statement_kind {
-	return or_statement
-}
-
-func (s OrStatement) String() string {
-	return fmt.Sprintf("%s or %s", s.Try.String(), s.Fail.String())
+	return OrStatementKind
 }
 
 func (s OrStatement) Location() Location {
@@ -634,11 +559,7 @@ func (s SingleLineCommentStatement) is_definition() bool {
 }
 
 func (s SingleLineCommentStatement) Kind() statement_kind {
-	return single_line_comment_statement
-}
-
-func (s SingleLineCommentStatement) String() string {
-	return s.Comment
+	return SingleLineCommentStatementKind
 }
 
 func (s SingleLineCommentStatement) Location() Location {
@@ -659,11 +580,7 @@ func (s MultiLineCommentStatement) is_definition() bool {
 }
 
 func (s MultiLineCommentStatement) Kind() statement_kind {
-	return multi_line_comment_statement
-}
-
-func (s MultiLineCommentStatement) String() string {
-	return s.Comment
+	return MultiLineCommentStatementKind
 }
 
 func (s MultiLineCommentStatement) Location() Location {
@@ -672,17 +589,27 @@ func (s MultiLineCommentStatement) Location() Location {
 
 // EXPRESSIONS
 
+type AnonymousFunExpression struct {
+	Signature AnonymousFunctionSignature `json:"signature"`
+	Body      StatementList              `json:"body"`
+	location  Location
+}
+
+func (e AnonymousFunExpression) Kind() expression_kind {
+	return AnonymousFunExpressionKind
+}
+
+func (e AnonymousFunExpression) Location() Location {
+	return e.location
+}
+
 type IdentifierExpression struct {
 	Value    string `json:"value"`
 	location Location
 }
 
 func (e IdentifierExpression) Kind() expression_kind {
-	return identifier_expression
-}
-
-func (e IdentifierExpression) String() string {
-	return e.Value
+	return IdentifierExpressionKind
 }
 
 func (e IdentifierExpression) Location() Location {
@@ -694,7 +621,7 @@ type CaretExpression struct {
 }
 
 func (e CaretExpression) Kind() expression_kind {
-	return caret_expression
+	return CaretExpressionKind
 }
 
 func (e CaretExpression) Location() Location {
@@ -708,11 +635,7 @@ type TypeCastExpression struct {
 }
 
 func (e TypeCastExpression) Kind() expression_kind {
-	return type_cast_expression
-}
-
-func (e TypeCastExpression) String() string {
-	return fmt.Sprintf("%s.(%s)", e.Value.String(), e.Type.String())
+	return TypeCastExpressionKind
 }
 
 func (e TypeCastExpression) Location() Location {
@@ -726,7 +649,7 @@ type InstanceofExpression struct {
 }
 
 func (e InstanceofExpression) Kind() expression_kind {
-	return instanceof_expression
+	return InstanceofExpressionKind
 }
 
 func (e InstanceofExpression) Location() Location {
@@ -738,11 +661,7 @@ type MatchSelfExpression struct {
 }
 
 func (e MatchSelfExpression) Kind() expression_kind {
-	return match_self_expression
-}
-
-func (e MatchSelfExpression) String() string {
-	return "."
+	return MatchSelfExpressionKind
 }
 
 func (e MatchSelfExpression) Location() Location {
@@ -757,11 +676,7 @@ type ArithmeticExpression struct {
 }
 
 func (e ArithmeticExpression) Kind() expression_kind {
-	return arithmetic_expression
-}
-
-func (e ArithmeticExpression) String() string {
-	return fmt.Sprintf("%s %s %s", e.LeftHandSide.String(), e.Operator, e.RightHandSide.String())
+	return ArithmeticExpressionKind
 }
 
 func (e ArithmeticExpression) Location() Location {
@@ -776,11 +691,7 @@ type BinaryExpression struct {
 }
 
 func (e BinaryExpression) Kind() expression_kind {
-	return binary_expression
-}
-
-func (e BinaryExpression) String() string {
-	return fmt.Sprintf("%s %s %s", e.LeftHandSide.String(), e.Operator, e.RightHandSide.String())
+	return BinaryExpressionKind
 }
 
 func (e BinaryExpression) Location() Location {
@@ -798,15 +709,11 @@ type StringLiteralExpression struct {
 }
 
 func (e StringLiteralExpression) Kind() expression_kind {
-	return string_literal_expression
-}
-
-func (e StringLiteralExpression) String() string {
-	return fmt.Sprintf("\"%s\"", e.Value)
+	return StringLiteralExpressionKind
 }
 
 func (e StringLiteralExpression) LiteralKind() literal_kind {
-	return string_literal_kind
+	return StringLiteralKind
 }
 
 func (e StringLiteralExpression) Location() Location {
@@ -819,15 +726,11 @@ type RuneLiteralExpression struct {
 }
 
 func (e RuneLiteralExpression) Kind() expression_kind {
-	return rune_literal_expression
-}
-
-func (e RuneLiteralExpression) String() string {
-	return fmt.Sprintf("'%s'", string(e.Value))
+	return RuneLiteralExpressionKind
 }
 
 func (e RuneLiteralExpression) LiteralKind() literal_kind {
-	return rune_literal_kind
+	return RuneLiteralKind
 }
 
 func (e RuneLiteralExpression) Location() Location {
@@ -840,28 +743,20 @@ type BoolLiteralExpression struct {
 }
 
 func (e BoolLiteralExpression) Kind() expression_kind {
-	return bool_literal_expression
-}
-
-func (e BoolLiteralExpression) String() string {
-	if e.Value {
-		return "true"
-	}
-
-	return "false"
+	return BoolLiteralExpressionKind
 }
 
 func (e BoolLiteralExpression) LiteralKind() literal_kind {
-	return bool_literal_kind
+	return BoolLiteralKind
 }
 
 func (e BoolLiteralExpression) Location() Location {
 	return e.location
 }
 
-type NumberLiteral interface {
-	Type() interface{}
-	Value() interface{}
+type NumberLiteral struct {
+	Type  TypeLiteral
+	Value interface{}
 }
 
 type NumberLiteralExpression struct {
@@ -870,15 +765,11 @@ type NumberLiteralExpression struct {
 }
 
 func (e NumberLiteralExpression) Kind() expression_kind {
-	return number_literal_expression
-}
-
-func (e NumberLiteralExpression) String() string {
-	return fmt.Sprintf("%d", e.Value)
+	return NumberLiteralExpressionKind
 }
 
 func (e NumberLiteralExpression) LiteralKind() literal_kind {
-	return number_literal_kind
+	return NumberLiteralKind
 }
 
 func (e NumberLiteralExpression) Location() Location {
@@ -896,21 +787,11 @@ type ListLiteralExpression struct {
 }
 
 func (e ListLiteralExpression) Kind() expression_kind {
-	return list_literal_expression
-}
-
-func (e ListLiteralExpression) String() string {
-	values := []printable{}
-
-	for _, value := range e.Value {
-		values = append(values, value.Value)
-	}
-
-	return stringify_list(values, "[", "]", true, ", ")
+	return ListLiteralExpressionKind
 }
 
 func (e ListLiteralExpression) LiteralKind() literal_kind {
-	return list_literal_kind
+	return ListLiteralKind
 }
 
 func (e ListLiteralExpression) Location() Location {
@@ -923,11 +804,11 @@ type RecordLiteralExpression struct {
 }
 
 func (e RecordLiteralExpression) Kind() expression_kind {
-	return record_literal_expression
+	return RecordLiteralExpressionKind
 }
 
 func (e RecordLiteralExpression) LiteralKind() literal_kind {
-	return record_literal_kind
+	return RecordLiteralKind
 }
 
 func (e RecordLiteralExpression) Location() Location {
@@ -941,11 +822,11 @@ type InstanceLiteralExpression struct {
 }
 
 func (e InstanceLiteralExpression) Kind() expression_kind {
-	return instance_literal_expression
+	return InstanceLiteralExpressionKind
 }
 
 func (e InstanceLiteralExpression) LiteralKind() literal_kind {
-	return instance_literal_kind
+	return InstanceLiteralKind
 }
 
 func (e InstanceLiteralExpression) Location() Location {
@@ -959,11 +840,7 @@ type CallExpression struct {
 }
 
 func (e CallExpression) Kind() expression_kind {
-	return call_expression
-}
-
-func (e CallExpression) String() string {
-	return fmt.Sprintf("%s%s", e.Callee.String(), stringify_list(e.Arguments, "(", ")", true, ", "))
+	return CallExpressionKind
 }
 
 func (e CallExpression) Location() Location {
@@ -977,25 +854,36 @@ type MemberExpression struct {
 }
 
 func (e MemberExpression) Kind() expression_kind {
-	return member_expression
-}
-
-func (e MemberExpression) String() string {
-	return fmt.Sprintf("%s.%s", e.LeftHandSide.String(), e.RightHandSide.String())
+	return MemberExpressionKind
 }
 
 func (e MemberExpression) Location() Location {
 	return e.location
 }
 
+type IndexExpression struct {
+	Host     Expression `json:"host"`
+	Index    Expression `json:"index"`
+	location Location
+}
+
+func (e IndexExpression) Kind() expression_kind {
+	return IndexExpressionKind
+}
+
+func (e IndexExpression) Location() Location {
+	return e.location
+}
+
 type MatchExpression struct {
+	Against   Expression       `json:"against"`
 	Blocks    []PredicateBlock `json:"blocks"`
-	BaseBlock []Statement      `json:"base_block"`
+	BaseBlock StatementList    `json:"base_block"`
 	location  Location
 }
 
 func (e MatchExpression) Kind() expression_kind {
-	return match_expression
+	return MatchExpressionKind
 }
 
 func (e MatchExpression) Location() Location {
@@ -1008,13 +896,36 @@ type GroupExpression struct {
 }
 
 func (e GroupExpression) Kind() expression_kind {
-	return group_expression
-}
-
-func (e GroupExpression) String() string {
-	return fmt.Sprintf("(%s)", e.Expression.String())
+	return GroupExpressionKind
 }
 
 func (e GroupExpression) Location() Location {
+	return e.location
+}
+
+type ThisExpression struct {
+	location Location
+}
+
+func (e ThisExpression) Kind() expression_kind {
+	return ThisExpressionKind
+}
+
+func (e ThisExpression) Location() Location {
+	return e.location
+}
+
+type SteppedChangeExpression struct {
+	Expression Expression                    `json:"expression"`
+	Operation  stepped_change_operation_kind `json:"operation"`
+	Pre        bool                          `json:"pre"`
+	location   Location
+}
+
+func (e SteppedChangeExpression) Kind() expression_kind {
+	return SteppedChangeExpressionKind
+}
+
+func (e SteppedChangeExpression) Location() Location {
 	return e.location
 }

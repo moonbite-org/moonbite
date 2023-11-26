@@ -25,6 +25,7 @@ var keywords = map[string]token_kind{
 	"else":       else_keyword,
 	"for":        for_keyword,
 	"fun":        fun_keyword,
+	"hidden":     hidden_keyword,
 	"if":         if_keyword,
 	"implements": implements_keyword,
 	"instanceof": instanceof_keyword,
@@ -226,7 +227,7 @@ func (l *lexer) LexStringLiteral() {
 		l.advance()
 	}
 
-	if l.next_rune() == eof {
+	if l.next_rune() == eof || l.next_rune() == '\n' || l.next_rune() == '\r' {
 		l.throw(fmt.Sprintf(error_messages["u_eof"], "a '\"' (double quote) to close the string literal"))
 	} else {
 		l.backup_by(length - 1)
@@ -268,7 +269,7 @@ func (l *lexer) LexRuneLiteral() {
 		l.advance()
 	}
 
-	if l.next_rune() == eof {
+	if l.next_rune() == eof || l.next_rune() == '\n' || l.next_rune() == '\r' {
 		l.throw(fmt.Sprintf(error_messages["u_eof"], "a \"'\" (single quote) to close the rune literal"))
 	} else {
 		if length == 1 {
@@ -360,7 +361,7 @@ func (l *lexer) LexOperatorChars() {
 	switch l.current_rune() {
 	case '=':
 		if l.next_rune() == '=' {
-			token = l.create_token(binary_predicate, 2)
+			token = l.create_token(binary_operator, 2)
 		} else {
 			token = l.create_token(assignment, 1)
 		}
@@ -412,9 +413,21 @@ func (l *lexer) LexOperatorChars() {
 	case '%':
 		token = l.create_token(percent, 1)
 	case '&':
-		token = l.create_token(ampersand, 1)
+		next := l.next_rune()
+
+		if next == '&' {
+			token = l.create_token(binary_operator, 2)
+		} else {
+			token = l.create_token(ampersand, 1)
+		}
 	case '|':
-		token = l.create_token(pipe, 1)
+		next := l.next_rune()
+
+		if next == '|' {
+			token = l.create_token(binary_operator, 2)
+		} else {
+			token = l.create_token(pipe, 1)
+		}
 	case '^':
 		token = l.create_token(caret, 1)
 	}
@@ -446,7 +459,7 @@ func (l *lexer) LexControlChars() {
 		token = l.create_token(semicolon, 1)
 	case '<':
 		if l.next_rune() == '=' {
-			token = l.create_token(binary_predicate, 2)
+			token = l.create_token(binary_operator, 2)
 		} else if l.next_rune() == '-' {
 			token = l.create_token(channel, 2)
 		} else {
@@ -454,7 +467,7 @@ func (l *lexer) LexControlChars() {
 		}
 	case '>':
 		if l.next_rune() == '=' {
-			token = l.create_token(binary_predicate, 2)
+			token = l.create_token(binary_operator, 2)
 		} else {
 			token = l.create_token(right_angle_bracks, 1)
 		}

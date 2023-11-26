@@ -1,17 +1,33 @@
 package main
 
-trait Saturable<T> {
-  fun default() T
+type Slice<T> {
+  value T
 }
 
-type String implements [Saturable<string>] string
-
-fun for String default() string {
-  return data.ali
+fun for Slice set(value T) {
+  this.value = value
 }
 
-var Int length
+fun for Slice set1(value T) {
+  this.value = value
+}
 
-fun for String length() Int {
-  return length
+fun for Slice set2(value T) {
+  this.value = value
+}
+
+fun for Slice set3(value T) {
+  this.value = value
+}
+
+fun for Slice set4(value T) {
+  this.value = value
+}
+
+fun for Slice set5(value T) {
+  this.value = value
+}
+
+fun for Slice set6(value T) {
+  this.value = value
 }

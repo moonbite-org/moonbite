@@ -6,23 +6,21 @@ import (
 	"os"
 	"time"
 
-	"github.com/CanPacis/tokenizer/formatter"
-	"github.com/CanPacis/tokenizer/parser"
+	"github.com/moonbite-org/moonbite/parser"
 )
 
 func main() {
-	p := "/Users/muhammedalican/Documents/projects/moonlang/design/test.mb"
+	p := "/Users/muhammedalican/Documents/projects/moonbite/design/test.mb"
 	input, _ := os.ReadFile(p)
 
 	start := time.Now()
 	ast, err := parser.Parse(input, p)
-	fmt.Printf("Time: %s\n\n//%s\n", time.Since(start), ast.FileName)
+	fmt.Println(time.Since(start))
 
 	if err.Exists {
 		fmt.Println("There is an error", err)
 	}
 
-	data, _ := json.Marshal(ast)
-	os.WriteFile("ast.json", data, 0644)
-	fmt.Println(formatter.Format(ast))
+	data, _ := json.MarshalIndent(&ast, "", "  ")
+	fmt.Println(string(data))
 }
