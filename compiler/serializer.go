@@ -9,7 +9,22 @@ import (
 	"github.com/moonbite-org/moonbite/common"
 )
 
-func SerializeValue(value interface{}) ([]byte, error) {
+type Fun struct {
+	instructions []byte
+}
+
+func CreateFun(instructions []byte) Fun {
+	return Fun{
+		instructions: instructions,
+	}
+}
+
+func SerializeValue[T bool | int | string | map[string]interface{} | Fun](value T) ([]byte, error) {
+	var v interface{} = value
+	return serialize_value(v)
+}
+
+func serialize_value(value interface{}) ([]byte, error) {
 	switch reflect.TypeOf(value).Kind() {
 	case reflect.String:
 		return SerializeString(value.(string)), nil
@@ -21,6 +36,8 @@ func SerializeValue(value interface{}) ([]byte, error) {
 		return SerializeNumber(value)
 	case reflect.Map:
 		return SerializeStruct(value.(map[string]interface{}))
+	case reflect.TypeOf(Fun{}).Kind():
+		return SerializeFunction(value.(Fun).instructions)
 	default:
 		return []byte{}, fmt.Errorf("unsupported type")
 	}
@@ -78,7 +95,7 @@ func SerializeNumber(value any) ([]byte, error) {
 	}
 
 	buffer := bytes.Buffer{}
-	err := binary.Write(&buffer, binary.BigEndian, value)
+	err := binary.Write(&buffer, binary.LittleEndian, value)
 
 	if err != nil {
 		return []byte{}, err
@@ -93,7 +110,7 @@ func SerializeList(value []interface{}) ([]byte, error) {
 	result := []byte{common.TypeMap["list"]}
 
 	for _, v := range value {
-		val, err := SerializeValue(v)
+		val, err := serialize_value(v)
 
 		if err != nil {
 			return []byte{common.TypeMap["list"], common.TypeMap["terminator"]}, err
@@ -111,7 +128,7 @@ func SerializeStruct(value map[string]interface{}) ([]byte, error) {
 
 	for key, v := range value {
 		result = append(result, SerializeString(key)...)
-		val, err := SerializeValue(v)
+		val, err := serialize_value(v)
 
 		if err != nil {
 			return []byte{common.TypeMap["struct"], common.TypeMap["terminator"]}, err
@@ -124,8 +141,11 @@ func SerializeStruct(value map[string]interface{}) ([]byte, error) {
 	return result, nil
 }
 
-func SerializeFunction() ([]byte, error) {
-	result := []byte{common.TypeMap["fun"], 0, common.TypeMap["terminator"]}
+func SerializeFunction(instructions []byte) ([]byte, error) {
+	result := []byte{common.TypeMap["fun"]}
+
+	result = append(result, instructions...)
+	result = append(result, common.TypeMap["terminator"])
 
 	return result, nil
 }

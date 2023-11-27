@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path"
 	"reflect"
+
+	"github.com/moonbite-org/moonbite/common"
 )
 
 // extra allowed keywords inside code blocks
@@ -15,7 +17,7 @@ type parser_s struct {
 	input            []byte
 	offset           int
 	tokens           []Token
-	error            Error
+	error            common.Error
 	ast              Ast
 	expressions      []Expression
 	is_match_context bool
@@ -592,7 +594,7 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 				Literal: value,
 			}
 		} else {
-			p.throw(fmt.Sprintf(error_messages["i_con"], "use a struct literal to create a type literal"))
+			p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "use a struct literal to create a type literal"))
 		}
 	}
 	p.skip_whitespace()
@@ -1080,7 +1082,7 @@ func (p *parser_s) continue_expression() Expression {
 	case rune_literal, string_literal, bool_literal, number_literal:
 		p.set_current_expression(p.parse_literal_expression())
 
-		is_ended := p.might_expect([]token_kind{whitespace, new_line})
+		is_ended := p.might_expect([]token_kind{new_line})
 
 		if is_ended != nil {
 			return p.current_expression()
@@ -1136,7 +1138,7 @@ func (p *parser_s) continue_expression() Expression {
 		}
 
 		p.set_current_expression(p.parse_literal_expression())
-		is_ended := p.might_expect([]token_kind{whitespace, new_line})
+		is_ended := p.might_expect([]token_kind{new_line})
 
 		if is_ended != nil {
 			return p.current_expression()
@@ -1145,6 +1147,15 @@ func (p *parser_s) continue_expression() Expression {
 		return p.continue_expression()
 	case left_angle_bracks, right_angle_bracks, binary_operator:
 		return p.parse_binary_expression()
+	// case right_angle_bracks:
+	// 	p.advance()
+	// 	is_literal := p.might_expect([]token_kind{left_curly_bracks})
+	// 	p.backup()
+
+	// 	if is_literal != nil {
+	// 		fmt.Println(p.current_token(), p.current_expression())
+	// 		fmt.Println("literal")
+	// 	}
 	case plus, minus, star, forward_slash:
 		return p.parse_arithmetic_expression()
 	case increment, decrement:
@@ -1171,7 +1182,7 @@ func (p *parser_s) continue_expression() Expression {
 	case left_squre_bracks:
 		if p.current_expression() == nil {
 			p.set_current_expression(p.parse_literal_expression())
-			is_ended := p.might_expect([]token_kind{whitespace, new_line})
+			is_ended := p.might_expect([]token_kind{new_line})
 
 			if is_ended != nil {
 				return p.current_expression()
@@ -1180,9 +1191,14 @@ func (p *parser_s) continue_expression() Expression {
 		} else {
 			return p.parse_index_expression()
 		}
-	case whitespace, new_line:
+	case whitespace:
 		p.skip_whitespace()
 		return p.continue_expression()
+	case new_line:
+		result := p.current_expression()
+		p.pop_expression()
+
+		return result
 	default:
 		result := p.current_expression()
 		p.pop_expression()
@@ -1265,7 +1281,7 @@ func (p *parser_s) parse_member_expression() Expression {
 	}
 
 	if p.is_left_fun() {
-		p.throw(fmt.Sprintf(error_messages["i_con"], "read a value off of a function"))
+		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "read a value off of a function"))
 	}
 
 	rhs_t := p.must_expect([]token_kind{identifier})
@@ -1274,6 +1290,7 @@ func (p *parser_s) parse_member_expression() Expression {
 	p.set_current_expression(MemberExpression{
 		LeftHandSide:  p.current_expression(),
 		RightHandSide: *rhs,
+		location:      p.current_expression().Location(),
 	})
 
 	return p.continue_expression()
@@ -1311,7 +1328,7 @@ func (p *parser_s) parse_index_expression() Expression {
 	}
 
 	if p.is_left_fun() {
-		p.throw(fmt.Sprintf(error_messages["i_con"], "index a function"))
+		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "index a function"))
 	}
 
 	p.must_expect([]token_kind{left_squre_bracks})
@@ -1382,9 +1399,14 @@ func (p *parser_s) parse_binary_expression() Expression {
 	}
 
 	operator := p.must_expect([]token_kind{left_angle_bracks, right_angle_bracks, binary_operator})
-	p.skip_whitespace()
+	skipped := p.skip_whitespace()
 
 	rhs := p.parse_expression()
+
+	if rhs == nil {
+		p.backup_by(skipped)
+		p.must_expect([]token_kind{})
+	}
 
 	p.set_current_expression(BinaryExpression{
 		LeftHandSide:  current,
@@ -1451,7 +1473,7 @@ func (p *parser_s) parse_stepped_operation_expression() Expression {
 	if reflect.TypeOf(expression) == reflect.TypeOf(CallExpression{}) {
 		p.backup()
 		defer p.advance()
-		p.throw(fmt.Sprintf(error_messages["i_con"], "do this operation with a function call"))
+		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "do this operation with a function call"))
 	}
 
 	p.set_current_expression(SteppedChangeExpression{
@@ -1646,7 +1668,7 @@ func (p *parser_s) parse_match_expression() Expression {
 	return p.continue_expression()
 }
 
-func Parse(input []byte, filepath string) (Ast, Error) {
+func Parse(input []byte, filepath string) (Ast, common.Error) {
 	filename := path.Base(filepath)
 
 	parser := parser_s{

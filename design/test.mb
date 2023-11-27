@@ -1,9 +1,17 @@
 package main
 
-fun main() {
-  var a = 5
+type Console {
+  fd int;
+}
 
-  os.Console{
-    a: ""
-  }
+fun for Console log(message byte) {
+  syscall.write(this.fd, message)
+}
+
+const console = Console{
+  fd: 0
+}
+
+fun main() {
+  console.log(65)
 }

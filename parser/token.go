@@ -1,6 +1,10 @@
 package parser
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/moonbite-org/moonbite/common"
+)
 
 type token_kind int
 
@@ -69,7 +73,9 @@ const (
 	implements_keyword
 	instanceof_keyword
 	match_keyword
+	map_keyword
 	mimics_keyword
+	move_keyword
 	of_keyword
 	or_keyword
 	package_keyword
@@ -133,40 +139,42 @@ var token_map = map[token_kind]string{
 	cardinal_literal: "CardinalLiteral",
 
 	keyword:            "Keyword",
-	as_keyword:         "AsKeyword",
-	base_keyword:       "BaseKeyword",
-	break_keyword:      "BreakKeyword",
-	const_keyword:      "ConstKeyword",
-	continue_keyword:   "ContinueKeyword",
-	corout_keyword:     "CoroutKeyword",
-	else_keyword:       "ElseKeyword",
-	for_keyword:        "ForKeyword",
-	fun_keyword:        "FunKeyword",
-	hidden_keyword:     "HiddenKeyword",
-	if_keyword:         "IfKeyword",
-	implements_keyword: "ImplementsKeyword",
-	instanceof_keyword: "InstanceofKeyword",
-	match_keyword:      "MatchKeyword",
-	mimics_keyword:     "MimicsKeyword",
-	of_keyword:         "OfKeyword",
-	or_keyword:         "OrKeyword",
-	package_keyword:    "PackageKeyword",
-	return_keyword:     "ReturnKeyword",
-	this_keyword:       "ThisKeyword",
-	trait_keyword:      "TraitKeyword",
-	type_keyword:       "TypeKeyword",
-	use_keyword:        "UseKeyword",
-	var_keyword:        "VarKeyword",
-	yield_keyword:      "YieldKeyword",
+	as_keyword:         "as",
+	base_keyword:       "base",
+	break_keyword:      "break",
+	const_keyword:      "const",
+	continue_keyword:   "continue",
+	corout_keyword:     "corout",
+	else_keyword:       "else",
+	for_keyword:        "for",
+	fun_keyword:        "fun",
+	hidden_keyword:     "hidden",
+	if_keyword:         "if",
+	implements_keyword: "implements",
+	instanceof_keyword: "instanceof",
+	match_keyword:      "match",
+	map_keyword:        "map",
+	mimics_keyword:     "mimics",
+	move_keyword:       "move",
+	of_keyword:         "of",
+	or_keyword:         "or",
+	package_keyword:    "package",
+	return_keyword:     "return",
+	this_keyword:       "this",
+	trait_keyword:      "trait",
+	type_keyword:       "type",
+	use_keyword:        "use",
+	var_keyword:        "var",
+	yield_keyword:      "yield",
 }
 
 type Token struct {
-	Kind       token_kind `json:"kind"`
-	Location   Location   `json:"location"`
-	Literal    string     `json:"literal"`
-	Raw        string     `json:"raw"`
-	Offset     int        `json:"offset"`
-	LineBreaks int        `json:"line_breaks"`
+	Kind       token_kind      `json:"kind"`
+	Location   common.Location `json:"location"`
+	Literal    string          `json:"literal"`
+	Raw        string          `json:"raw"`
+	Offset     int             `json:"offset"`
+	LineBreaks int             `json:"line_breaks"`
 }
 
 func (t Token) String() string {

@@ -1,46 +1,44 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/moonbite-org/moonbite/parser"
+	"github.com/moonbite-org/moonbite/vm"
 )
 
 func main() {
-	p := "/Users/muhammedalican/Documents/projects/moonbite/design/test.mb"
-	input, _ := os.ReadFile(p)
-
-	start := time.Now()
-	ast, p_err := parser.Parse(input, p)
-	fmt.Println(time.Since(start))
-
-	if p_err.Exists {
-		fmt.Println("There is an error", p_err)
-	}
-
-	data, _ := json.MarshalIndent(&ast, "", "  ")
-	fmt.Println(string(data))
-
-	// bin := compiler.Compiler{}
+	// bin := compiler.Binary{}
 
 	// mod := compiler.NewModule("main", true)
-	// p0 := mod.Save(mod.NextPointer(), 0)
-	// p1 := mod.Save(mod.NextPointer(), 65)
-	// mod.Call(mod.Builtins["Syscall.Write"], []int{p0, p1})
+	// fd := mod.Save(mod.NextPointer(), 0)
+	// mod.PushContext()
+	// mod.Call(11, -1, []compiler.Argument{compiler.PointerArgument{Value: fd}, compiler.ParamArgument{Value: 0}})
+	// log := mod.Save(mod.NextPointer(), compiler.CreateFun(mod.PopContext()))
+	// console := map[string]interface{}{
+	// 	"fd":  fd,
+	// 	"log": log,
+	// }
+	// mod.Save(mod.NextPointer(), console)
+	// mod.PushContext()
+	// m := mod.Save(mod.NextPointer(), 65)
+	// mod.Call(log, -1, []compiler.Argument{compiler.PointerArgument{Value: m}})
+	// main := mod.Save(mod.NextPointer(), compiler.CreateFun(mod.PopContext()))
+	// mod.Call(main, -1, []compiler.Argument{})
 	// bin.RegisterModule(mod)
 
-	// result, err := bin.Compile()
+	// compiled, err := bin.Compile()
 
 	// if err != nil {
-	// 	panic(p_err)
+	// 	panic(err)
 	// }
 
-	// fmt.Println(result)
-
-	// v := vm.NewVm(result)
-
-	// fmt.Println(v)
+	// fmt.Println(compiled)
+	// os.WriteFile("main.mbin", compiled, 0644)
+	start := time.Now()
+	compiled, _ := os.ReadFile("main.mbin")
+	runner := vm.NewVm(compiled)
+	fmt.Println(runner.Run())
+	fmt.Println(time.Since(start))
 }

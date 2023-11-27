@@ -1,5 +1,7 @@
 package parser
 
+import "github.com/moonbite-org/moonbite/common"
+
 type statement_kind string
 type expression_kind string
 type type_kind string
@@ -178,7 +180,7 @@ type AnonymousFunctionSignature struct {
 	Parameters []TypedParameter  `json:"parameters"`
 	Generics   []ConstrainedType `json:"generics"`
 	ReturnType *TypeLiteral      `json:"return_type"`
-	location   Location
+	location   common.Location
 }
 
 func (s AnonymousFunctionSignature) is_fun_signature() bool {
@@ -194,7 +196,7 @@ type UnboundFunctionSignature struct {
 	Parameters []TypedParameter     `json:"parameters"`
 	Generics   []ConstrainedType    `json:"generics"`
 	ReturnType *TypeLiteral         `json:"return_type"`
-	location   Location
+	location   common.Location
 }
 
 func (s UnboundFunctionSignature) is_fun_signature() bool {
@@ -207,7 +209,7 @@ type BoundFunctionSignature struct {
 	Generics   []ConstrainedType    `json:"generics"`
 	Parameters []TypedParameter     `json:"parameters"`
 	ReturnType *TypeLiteral         `json:"return_type"`
-	location   Location
+	location   common.Location
 }
 
 func (s BoundFunctionSignature) is_fun_signature() bool {
@@ -216,14 +218,14 @@ func (s BoundFunctionSignature) is_fun_signature() bool {
 
 type Statement interface {
 	Kind() statement_kind
-	Location() Location
+	Location() common.Location
 }
 
 type StatementList []Statement
 
 type Expression interface {
 	Kind() expression_kind
-	Location() Location
+	Location() common.Location
 }
 
 type Definition interface {
@@ -249,14 +251,14 @@ type Ast struct {
 
 type ExpressionStatement struct {
 	Expression Expression `json:"expression"`
-	location   Location
+	location   common.Location
 }
 
 func (s ExpressionStatement) Kind() statement_kind {
 	return ExpressionStatementKind
 }
 
-func (s ExpressionStatement) Location() Location {
+func (s ExpressionStatement) Location() common.Location {
 	return s.location
 }
 
@@ -266,7 +268,7 @@ type DeclarationStatement struct {
 	Type     *TypeLiteral         `json:"type"`
 	Value    *Expression          `json:"value"`
 	Hidden   bool                 `json:"hidden"`
-	location Location
+	location common.Location
 }
 
 func (s DeclarationStatement) is_definition() bool {
@@ -277,7 +279,7 @@ func (s DeclarationStatement) Kind() statement_kind {
 	return DeclarationStatementKind
 }
 
-func (s DeclarationStatement) Location() Location {
+func (s DeclarationStatement) Location() common.Location {
 	return s.location
 }
 
@@ -285,41 +287,41 @@ type AssignmentStatement struct {
 	LeftHandSide  Expression `json:"left_hand_side"`
 	RightHandSide Expression `json:"right_hand_side"`
 	Operator      string     `json:"operator"`
-	location      Location
+	location      common.Location
 }
 
 func (s AssignmentStatement) Kind() statement_kind {
 	return AssignmentStatementKind
 }
 
-func (s AssignmentStatement) Location() Location {
+func (s AssignmentStatement) Location() common.Location {
 	return s.location
 }
 
 type PackageStatement struct {
 	Name     IdentifierExpression `json:"name"`
-	location Location
+	location common.Location
 }
 
 func (s PackageStatement) Kind() statement_kind {
 	return PackageStatementKind
 }
 
-func (s PackageStatement) Location() Location {
+func (s PackageStatement) Location() common.Location {
 	return s.location
 }
 
 type UseStatement struct {
 	Resource IdentifierExpression  `json:"resource"`
 	As       *IdentifierExpression `json:"as"`
-	location Location
+	location common.Location
 }
 
 func (s UseStatement) Kind() statement_kind {
 	return UseStatementKind
 }
 
-func (s UseStatement) Location() Location {
+func (s UseStatement) Location() common.Location {
 	return s.location
 }
 
@@ -329,7 +331,7 @@ type TypeDefinitionStatement struct {
 	Implementations []TypeIdentifier     `json:"implementations"`
 	Definition      TypeLiteral          `json:"definiton"`
 	Hidden          bool                 `json:"hidden"`
-	location        Location
+	location        common.Location
 }
 
 func (s TypeDefinitionStatement) is_definition() bool {
@@ -340,7 +342,7 @@ func (s TypeDefinitionStatement) Kind() statement_kind {
 	return TypeDefinitionStatementKind
 }
 
-func (s TypeDefinitionStatement) Location() Location {
+func (s TypeDefinitionStatement) Location() common.Location {
 	return s.location
 }
 
@@ -350,7 +352,7 @@ type TraitDefinitionStatement struct {
 	Mimics     []TypeIdentifier           `json:"mimics"`
 	Definition []UnboundFunctionSignature `json:"definition"`
 	Hidden     bool                       `json:"hidden"`
-	location   Location
+	location   common.Location
 }
 
 func (s TraitDefinitionStatement) is_definition() bool {
@@ -361,7 +363,7 @@ func (s TraitDefinitionStatement) Kind() statement_kind {
 	return TraitDefinitionStatementKind
 }
 
-func (s TraitDefinitionStatement) Location() Location {
+func (s TraitDefinitionStatement) Location() common.Location {
 	return s.location
 }
 
@@ -375,7 +377,7 @@ type UnboundFunDefinitionStatement struct {
 	Signature UnboundFunctionSignature `json:"signature"`
 	Body      StatementList            `json:"body"`
 	Hidden    bool                     `json:"hidden"`
-	location  Location
+	location  common.Location
 }
 
 func (s UnboundFunDefinitionStatement) is_definition() bool {
@@ -390,7 +392,7 @@ func (s UnboundFunDefinitionStatement) Kind() statement_kind {
 	return UnboundFunDefinitionStatementKind
 }
 
-func (s UnboundFunDefinitionStatement) Location() Location {
+func (s UnboundFunDefinitionStatement) Location() common.Location {
 	return s.location
 }
 
@@ -398,7 +400,7 @@ type BoundFunDefinitionStatement struct {
 	Signature BoundFunctionSignature `json:"signature"`
 	Body      StatementList          `json:"body"`
 	Hidden    bool                   `json:"hidden"`
-	location  Location
+	location  common.Location
 }
 
 func (s BoundFunDefinitionStatement) is_definition() bool {
@@ -413,57 +415,57 @@ func (s BoundFunDefinitionStatement) Kind() statement_kind {
 	return BoundFunDefinitionStatementKind
 }
 
-func (s BoundFunDefinitionStatement) Location() Location {
+func (s BoundFunDefinitionStatement) Location() common.Location {
 	return s.location
 }
 
 type ReturnStatement struct {
 	Value    *Expression `json:"expression"`
-	location Location
+	location common.Location
 }
 
 func (s ReturnStatement) Kind() statement_kind {
 	return ReturnStatementKind
 }
 
-func (s ReturnStatement) Location() Location {
+func (s ReturnStatement) Location() common.Location {
 	return s.location
 }
 
 type YieldStatement struct {
 	Value    *Expression `json:"expression"`
-	location Location
+	location common.Location
 }
 
 func (s YieldStatement) Kind() statement_kind {
 	return YieldStatementKind
 }
 
-func (s YieldStatement) Location() Location {
+func (s YieldStatement) Location() common.Location {
 	return s.location
 }
 
 type BreakStatement struct {
-	location Location
+	location common.Location
 }
 
 func (s BreakStatement) Kind() statement_kind {
 	return BreakStatementKind
 }
 
-func (s BreakStatement) Location() Location {
+func (s BreakStatement) Location() common.Location {
 	return s.location
 }
 
 type ContinueStatement struct {
-	location Location
+	location common.Location
 }
 
 func (s ContinueStatement) Kind() statement_kind {
 	return ContinueStatementKind
 }
 
-func (s ContinueStatement) Location() Location {
+func (s ContinueStatement) Location() common.Location {
 	return s.location
 }
 
@@ -502,14 +504,14 @@ func (l TripartiteLoopPredicate) LoopKind() loop_kind {
 type LoopStatement struct {
 	Predicate LoopPredicate `json:"predicate"`
 	Body      StatementList `json:"body"`
-	location  Location
+	location  common.Location
 }
 
 func (s LoopStatement) Kind() statement_kind {
 	return LoopStatementKind
 }
 
-func (s LoopStatement) Location() Location {
+func (s LoopStatement) Location() common.Location {
 	return s.location
 }
 
@@ -522,34 +524,34 @@ type IfStatement struct {
 	MainBlock    PredicateBlock   `json:"main_block"`
 	ElseIfBlocks []PredicateBlock `json:"else_if_blocks"`
 	ElseBlock    StatementList    `json:"else_block"`
-	location     Location
+	location     common.Location
 }
 
 func (s IfStatement) Kind() statement_kind {
 	return IfStatementKind
 }
 
-func (s IfStatement) Location() Location {
+func (s IfStatement) Location() common.Location {
 	return s.location
 }
 
 type OrStatement struct {
 	Try      Expression `json:"try"`
 	Fail     Expression `json:"fail"`
-	location Location
+	location common.Location
 }
 
 func (s OrStatement) Kind() statement_kind {
 	return OrStatementKind
 }
 
-func (s OrStatement) Location() Location {
+func (s OrStatement) Location() common.Location {
 	return s.location
 }
 
 type SingleLineCommentStatement struct {
 	Comment  string `json:"comment"`
-	location Location
+	location common.Location
 }
 
 func (s SingleLineCommentStatement) is_comment() bool {
@@ -563,13 +565,13 @@ func (s SingleLineCommentStatement) Kind() statement_kind {
 	return SingleLineCommentStatementKind
 }
 
-func (s SingleLineCommentStatement) Location() Location {
+func (s SingleLineCommentStatement) Location() common.Location {
 	return s.location
 }
 
 type MultiLineCommentStatement struct {
 	Comment  string `json:"comment"`
-	location Location
+	location common.Location
 }
 
 func (s MultiLineCommentStatement) is_comment() bool {
@@ -584,7 +586,7 @@ func (s MultiLineCommentStatement) Kind() statement_kind {
 	return MultiLineCommentStatementKind
 }
 
-func (s MultiLineCommentStatement) Location() Location {
+func (s MultiLineCommentStatement) Location() common.Location {
 	return s.location
 }
 
@@ -593,79 +595,79 @@ func (s MultiLineCommentStatement) Location() Location {
 type AnonymousFunExpression struct {
 	Signature AnonymousFunctionSignature `json:"signature"`
 	Body      StatementList              `json:"body"`
-	location  Location
+	location  common.Location
 }
 
 func (e AnonymousFunExpression) Kind() expression_kind {
 	return AnonymousFunExpressionKind
 }
 
-func (e AnonymousFunExpression) Location() Location {
+func (e AnonymousFunExpression) Location() common.Location {
 	return e.location
 }
 
 type IdentifierExpression struct {
 	Value    string `json:"value"`
-	location Location
+	location common.Location
 }
 
 func (e IdentifierExpression) Kind() expression_kind {
 	return IdentifierExpressionKind
 }
 
-func (e IdentifierExpression) Location() Location {
+func (e IdentifierExpression) Location() common.Location {
 	return e.location
 }
 
 type CaretExpression struct {
-	location Location
+	location common.Location
 }
 
 func (e CaretExpression) Kind() expression_kind {
 	return CaretExpressionKind
 }
 
-func (e CaretExpression) Location() Location {
+func (e CaretExpression) Location() common.Location {
 	return e.location
 }
 
 type TypeCastExpression struct {
 	Value    Expression     `json:"value"`
 	Type     TypeIdentifier `json:"type"`
-	location Location
+	location common.Location
 }
 
 func (e TypeCastExpression) Kind() expression_kind {
 	return TypeCastExpressionKind
 }
 
-func (e TypeCastExpression) Location() Location {
+func (e TypeCastExpression) Location() common.Location {
 	return e.location
 }
 
 type InstanceofExpression struct {
 	LeftHandSide  Expression  `json:"left_hand_side"`
 	RightHandSide TypeLiteral `json:"right_hand_side"`
-	location      Location
+	location      common.Location
 }
 
 func (e InstanceofExpression) Kind() expression_kind {
 	return InstanceofExpressionKind
 }
 
-func (e InstanceofExpression) Location() Location {
+func (e InstanceofExpression) Location() common.Location {
 	return e.location
 }
 
 type MatchSelfExpression struct {
-	location Location
+	location common.Location
 }
 
 func (e MatchSelfExpression) Kind() expression_kind {
 	return MatchSelfExpressionKind
 }
 
-func (e MatchSelfExpression) Location() Location {
+func (e MatchSelfExpression) Location() common.Location {
 	return e.location
 }
 
@@ -673,14 +675,14 @@ type ArithmeticExpression struct {
 	LeftHandSide  Expression `json:"left_hand_side"`
 	RightHandSide Expression `json:"right_hand_side"`
 	Operator      string     `json:"operator"`
-	location      Location
+	location      common.Location
 }
 
 func (e ArithmeticExpression) Kind() expression_kind {
 	return ArithmeticExpressionKind
 }
 
-func (e ArithmeticExpression) Location() Location {
+func (e ArithmeticExpression) Location() common.Location {
 	return e.location
 }
 
@@ -688,14 +690,14 @@ type BinaryExpression struct {
 	LeftHandSide  Expression `json:"left_hand_side"`
 	RightHandSide Expression `json:"right_hand_side"`
 	Operator      string     `json:"operator"`
-	location      Location
+	location      common.Location
 }
 
 func (e BinaryExpression) Kind() expression_kind {
 	return BinaryExpressionKind
 }
 
-func (e BinaryExpression) Location() Location {
+func (e BinaryExpression) Location() common.Location {
 	return e.location
 }
 
@@ -706,7 +708,7 @@ type LiteralExpression interface {
 
 type StringLiteralExpression struct {
 	Value    string `json:"value"`
-	location Location
+	location common.Location
 }
 
 func (e StringLiteralExpression) Kind() expression_kind {
@@ -717,13 +719,13 @@ func (e StringLiteralExpression) LiteralKind() literal_kind {
 	return StringLiteralKind
 }
 
-func (e StringLiteralExpression) Location() Location {
+func (e StringLiteralExpression) Location() common.Location {
 	return e.location
 }
 
 type RuneLiteralExpression struct {
 	Value    rune `json:"value"`
-	location Location
+	location common.Location
 }
 
 func (e RuneLiteralExpression) Kind() expression_kind {
@@ -734,13 +736,13 @@ func (e RuneLiteralExpression) LiteralKind() literal_kind {
 	return RuneLiteralKind
 }
 
-func (e RuneLiteralExpression) Location() Location {
+func (e RuneLiteralExpression) Location() common.Location {
 	return e.location
 }
 
 type BoolLiteralExpression struct {
 	Value    bool `json:"value"`
-	location Location
+	location common.Location
 }
 
 func (e BoolLiteralExpression) Kind() expression_kind {
@@ -751,7 +753,7 @@ func (e BoolLiteralExpression) LiteralKind() literal_kind {
 	return BoolLiteralKind
 }
 
-func (e BoolLiteralExpression) Location() Location {
+func (e BoolLiteralExpression) Location() common.Location {
 	return e.location
 }
 
@@ -762,7 +764,7 @@ type NumberLiteral struct {
 
 type NumberLiteralExpression struct {
 	Value    NumberLiteral `json:"value"`
-	location Location
+	location common.Location
 }
 
 func (e NumberLiteralExpression) Kind() expression_kind {
@@ -773,7 +775,7 @@ func (e NumberLiteralExpression) LiteralKind() literal_kind {
 	return NumberLiteralKind
 }
 
-func (e NumberLiteralExpression) Location() Location {
+func (e NumberLiteralExpression) Location() common.Location {
 	return e.location
 }
 
@@ -784,7 +786,7 @@ type KeyValueEntry struct {
 
 type ListLiteralExpression struct {
 	Value    []KeyValueEntry `json:"value"`
-	location Location
+	location common.Location
 }
 
 func (e ListLiteralExpression) Kind() expression_kind {
@@ -795,13 +797,13 @@ func (e ListLiteralExpression) LiteralKind() literal_kind {
 	return ListLiteralKind
 }
 
-func (e ListLiteralExpression) Location() Location {
+func (e ListLiteralExpression) Location() common.Location {
 	return e.location
 }
 
 type RecordLiteralExpression struct {
 	Value    []KeyValueEntry `json:"value"`
-	location Location
+	location common.Location
 }
 
 func (e RecordLiteralExpression) Kind() expression_kind {
@@ -812,14 +814,14 @@ func (e RecordLiteralExpression) LiteralKind() literal_kind {
 	return RecordLiteralKind
 }
 
-func (e RecordLiteralExpression) Location() Location {
+func (e RecordLiteralExpression) Location() common.Location {
 	return e.location
 }
 
 type InstanceLiteralExpression struct {
 	Type     TypeIdentifier  `json:"type"`
 	Value    []KeyValueEntry `json:"value"`
-	location Location
+	location common.Location
 }
 
 func (e InstanceLiteralExpression) Kind() expression_kind {
@@ -830,49 +832,49 @@ func (e InstanceLiteralExpression) LiteralKind() literal_kind {
 	return InstanceLiteralKind
 }
 
-func (e InstanceLiteralExpression) Location() Location {
+func (e InstanceLiteralExpression) Location() common.Location {
 	return e.location
 }
 
 type CallExpression struct {
 	Callee    Expression   `json:"callee"`
 	Arguments []Expression `json:"arguments"`
-	location  Location
+	location  common.Location
 }
 
 func (e CallExpression) Kind() expression_kind {
 	return CallExpressionKind
 }
 
-func (e CallExpression) Location() Location {
+func (e CallExpression) Location() common.Location {
 	return e.location
 }
 
 type MemberExpression struct {
 	LeftHandSide  Expression           `json:"left_hand_side"`
 	RightHandSide IdentifierExpression `json:"right_hand_side"`
-	location      Location
+	location      common.Location
 }
 
 func (e MemberExpression) Kind() expression_kind {
 	return MemberExpressionKind
 }
 
-func (e MemberExpression) Location() Location {
+func (e MemberExpression) Location() common.Location {
 	return e.location
 }
 
 type IndexExpression struct {
 	Host     Expression `json:"host"`
 	Index    Expression `json:"index"`
-	location Location
+	location common.Location
 }
 
 func (e IndexExpression) Kind() expression_kind {
 	return IndexExpressionKind
 }
 
-func (e IndexExpression) Location() Location {
+func (e IndexExpression) Location() common.Location {
 	return e.location
 }
 
@@ -880,39 +882,39 @@ type MatchExpression struct {
 	Against   Expression       `json:"against"`
 	Blocks    []PredicateBlock `json:"blocks"`
 	BaseBlock StatementList    `json:"base_block"`
-	location  Location
+	location  common.Location
 }
 
 func (e MatchExpression) Kind() expression_kind {
 	return MatchExpressionKind
 }
 
-func (e MatchExpression) Location() Location {
+func (e MatchExpression) Location() common.Location {
 	return e.location
 }
 
 type GroupExpression struct {
 	Expression Expression `json:"expression"`
-	location   Location
+	location   common.Location
 }
 
 func (e GroupExpression) Kind() expression_kind {
 	return GroupExpressionKind
 }
 
-func (e GroupExpression) Location() Location {
+func (e GroupExpression) Location() common.Location {
 	return e.location
 }
 
 type ThisExpression struct {
-	location Location
+	location common.Location
 }
 
 func (e ThisExpression) Kind() expression_kind {
 	return ThisExpressionKind
 }
 
-func (e ThisExpression) Location() Location {
+func (e ThisExpression) Location() common.Location {
 	return e.location
 }
 
@@ -920,27 +922,27 @@ type SteppedChangeExpression struct {
 	Expression Expression                    `json:"expression"`
 	Operation  stepped_change_operation_kind `json:"operation"`
 	Pre        bool                          `json:"pre"`
-	location   Location
+	location   common.Location
 }
 
 func (e SteppedChangeExpression) Kind() expression_kind {
 	return SteppedChangeExpressionKind
 }
 
-func (e SteppedChangeExpression) Location() Location {
+func (e SteppedChangeExpression) Location() common.Location {
 	return e.location
 }
 
 type OrExpression struct {
 	LeftHandSide  Expression `json:"left_hand_side"`
 	RightHandSide Expression `json:"right_hand_side"`
-	location      Location
+	location      common.Location
 }
 
 func (e OrExpression) Kind() expression_kind {
 	return OrExpressionKind
 }
 
-func (e OrExpression) Location() Location {
+func (e OrExpression) Location() common.Location {
 	return e.location
 }

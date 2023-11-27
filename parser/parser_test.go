@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/moonbite-org/moonbite/common"
 	"github.com/moonbite-org/moonbite/parser"
 )
 
@@ -13,7 +14,7 @@ func assert_identifier(t *testing.T, given parser.IdentifierExpression, expected
 	}
 }
 
-func assert_no_error(t *testing.T, err parser.Error) {
+func assert_no_error(t *testing.T, err common.Error) {
 	if err.Exists {
 		t.Errorf("expected no error but got: %s", err)
 	}
