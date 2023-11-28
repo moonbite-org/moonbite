@@ -1,14 +1,7 @@
 package main
 
-import (
-	"fmt"
-	"os"
-	"time"
-
-	"github.com/moonbite-org/moonbite/vm"
-)
-
 func main() {
+	// start := time.Now()
 	// bin := compiler.Binary{}
 
 	// mod := compiler.NewModule("main", true)
@@ -34,11 +27,10 @@ func main() {
 	// 	panic(err)
 	// }
 
-	// fmt.Println(compiled)
+	// // fmt.Println(compiled)
 	// os.WriteFile("main.mbin", compiled, 0644)
-	start := time.Now()
-	compiled, _ := os.ReadFile("main.mbin")
-	runner := vm.NewVm(compiled)
-	fmt.Println(runner.Run())
-	fmt.Println(time.Since(start))
+	// // compiled, _ := os.ReadFile("main.mbin")
+	// runner := vm.NewVm(compiled)
+	// fmt.Println(runner.Run())
+	// fmt.Println(time.Since(start))
 }
