@@ -1,17 +1,5 @@
 package main
 
-type Console {
-  fd int;
-}
+var a = 5
 
-fun for Console log(message byte) {
-  syscall.write(this.fd, message)
-}
-
-const console = Console{
-  fd: 0
-}
-
-fun main() {
-  console.log(65)
-}
+var b = false

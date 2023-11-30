@@ -20,6 +20,24 @@ func assert_no_error(t *testing.T, err common.Error) {
 	}
 }
 
+func assert_error(t *testing.T, err common.Error) {
+	if !err.Exists {
+		t.Errorf("expected error but no error is present")
+	}
+}
+
+func assert_string(t *testing.T, given, expexted string) {
+	if given != expexted {
+		t.Errorf("expected string to be %s but got %s", expexted, given)
+	}
+}
+
+func assert_int(t *testing.T, given, expexted int) {
+	if given != expexted {
+		t.Errorf("expected int to be %d but got %d", expexted, given)
+	}
+}
+
 func assert_type(t *testing.T, given, expected any) {
 	expected_t := reflect.TypeOf(expected)
 	given_t := reflect.TypeOf(given)
@@ -63,4 +81,206 @@ func TestDeclarationStatement(t *testing.T) {
 	definition := ast.Definitions[0]
 
 	assert_type(t, definition, parser.DeclarationStatement{})
+}
+
+func TestIdentifierExpression(t *testing.T) {
+	input := []byte("package main const test = data")
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+
+	assert_type(t, definition, parser.DeclarationStatement{})
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.IdentifierExpression{})
+}
+
+func TestArithmeticExpression(t *testing.T) {
+	input := []byte("package main const test = 2 + 3")
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.ArithmeticExpression{})
+	expression := (*definition.(parser.DeclarationStatement).Value).(parser.ArithmeticExpression)
+
+	assert_type(t, expression.LeftHandSide, parser.NumberLiteralExpression{})
+	assert_type(t, expression.RightHandSide, parser.NumberLiteralExpression{})
+	assert_string(t, expression.Operator, "+")
+
+	input = []byte("package main const test = 2 + 3 * 5")
+	ast, err = parser.Parse(input, "test.mb")
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.ArithmeticExpression{})
+	expression = (*definition.(parser.DeclarationStatement).Value).(parser.ArithmeticExpression)
+
+	assert_type(t, expression.LeftHandSide, parser.NumberLiteralExpression{})
+	assert_type(t, expression.RightHandSide, parser.ArithmeticExpression{})
+	assert_string(t, expression.Operator, "+")
+	assert_string(t, expression.RightHandSide.(parser.ArithmeticExpression).Operator, "*")
+
+	input = []byte("package main const test = (2 + 3) * 5")
+	ast, err = parser.Parse(input, "test.mb")
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.ArithmeticExpression{})
+	expression = (*definition.(parser.DeclarationStatement).Value).(parser.ArithmeticExpression)
+
+	assert_type(t, expression.LeftHandSide, parser.GroupExpression{})
+	assert_type(t, expression.RightHandSide, parser.NumberLiteralExpression{})
+	assert_string(t, expression.Operator, "*")
+
+	group := expression.LeftHandSide.(parser.GroupExpression)
+
+	assert_type(t, group.Expression, parser.ArithmeticExpression{})
+	assert_string(t, group.Expression.(parser.ArithmeticExpression).Operator, "+")
+
+	input = []byte("package main const test = (2 + 3 * 5")
+	ast, err = parser.Parse(input, "test.mb")
+	assert_error(t, err)
+}
+
+func TestBinaryExpression(t *testing.T) {
+	input := []byte("package main const test = 2 == count")
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.BinaryExpression{})
+
+	expression := (*definition.(parser.DeclarationStatement).Value).(parser.BinaryExpression)
+	assert_type(t, expression.LeftHandSide, parser.NumberLiteralExpression{})
+	assert_type(t, expression.RightHandSide, parser.IdentifierExpression{})
+	assert_string(t, expression.Operator, "==")
+
+	input = []byte("package main const test = 2 > 5")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.BinaryExpression{})
+
+	expression = (*definition.(parser.DeclarationStatement).Value).(parser.BinaryExpression)
+	assert_type(t, expression.LeftHandSide, parser.NumberLiteralExpression{})
+	assert_type(t, expression.RightHandSide, parser.NumberLiteralExpression{})
+	assert_string(t, expression.Operator, ">")
+
+	input = []byte("package main const test = 2 >< 5")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const test = <string>")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const test = 2 == ")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const test = == ")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+}
+
+func TestCallExpression(t *testing.T) {
+	input := []byte("package main const test = print()")
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.CallExpression{})
+	expression := (*definition.(parser.DeclarationStatement).Value).(parser.CallExpression)
+
+	assert_type(t, expression.Callee, parser.IdentifierExpression{})
+	assert_string(t, expression.Callee.(parser.IdentifierExpression).Value, "print")
+	assert_int(t, len(expression.Arguments), 0)
+
+	input = []byte("package main const test = console.log(true)")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.CallExpression{})
+	expression = (*definition.(parser.DeclarationStatement).Value).(parser.CallExpression)
+
+	assert_type(t, expression.Callee, parser.MemberExpression{})
+	assert_int(t, len(expression.Arguments), 1)
+	assert_type(t, expression.Arguments[0], parser.BoolLiteralExpression{})
+
+	input = []byte("package main const test = console.log(true")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const test = console.log(true,)")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const test = (2 + 2)()")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+}
+
+func TestMemberExpression(t *testing.T) {
+	input := []byte("package main const test = data.count")
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.MemberExpression{})
+	expression := (*definition.(parser.DeclarationStatement).Value)
+
+	assert_type(t, expression.(parser.MemberExpression).LeftHandSide, parser.IdentifierExpression{})
+	assert_type(t, expression.(parser.MemberExpression).RightHandSide, parser.IdentifierExpression{})
+
+	input = []byte("package main const test = console.log()")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.CallExpression{})
+	expression = (*definition.(parser.DeclarationStatement).Value)
+
+	assert_type(t, expression.(parser.CallExpression).Callee, parser.MemberExpression{})
+	member := expression.(parser.CallExpression).Callee.(parser.MemberExpression)
+	assert_type(t, member.LeftHandSide, parser.IdentifierExpression{})
+	assert_type(t, member.RightHandSide, parser.IdentifierExpression{})
+	assert_string(t, member.LeftHandSide.(parser.IdentifierExpression).Value, "console")
+	assert_string(t, member.RightHandSide.Value, "log")
+
+	input = []byte("package main const test = console.")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const test = .log")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const test = .log()")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const test = console . log")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
 }

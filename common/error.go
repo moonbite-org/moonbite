@@ -15,6 +15,7 @@ var ErrorMessages = map[string]string{
 	"u_eof":   "Unexpected end of file, file ended but I was expecting %s",
 	"u_tok":   "Unexpected token, I was not expecting '%s'",
 	"u_tok_s": "Unexpected token, I was expecting '%s' but got '%s'",
+	"uc_con":  "Uncallable construct, I cannot treat this expression as a funcation callee.",
 	"i_con":   "Illegal construct, I cannot %s",
 	"i_val":   "Invalid value, I cannot make sense of this value. %s",
 }
@@ -40,6 +41,9 @@ type Error struct {
 }
 
 func (e Error) String() string {
+	if !e.Exists {
+		return ""
+	}
 	return fmt.Sprintf("%s: %s at %d:%d in %s", ErrorKindMap[e.Kind], e.Reason, e.Location.Line, e.Location.Column, e.Location.File)
 }
 

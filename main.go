@@ -1,36 +1,25 @@
 package main
 
+import (
+	"fmt"
+	"os"
+
+	"github.com/moonbite-org/moonbite/parser"
+)
+
 func main() {
-	// start := time.Now()
-	// bin := compiler.Binary{}
+	filepath := "/Users/muhammedalican/Documents/projects/moonbite/design/test.mb"
+	input, _ := os.ReadFile(filepath)
+	ast, err := parser.Parse(input, filepath)
 
-	// mod := compiler.NewModule("main", true)
-	// fd := mod.Save(mod.NextPointer(), 0)
-	// mod.PushContext()
-	// mod.Call(11, -1, []compiler.Argument{compiler.PointerArgument{Value: fd}, compiler.ParamArgument{Value: 0}})
-	// log := mod.Save(mod.NextPointer(), compiler.CreateFun(mod.PopContext()))
-	// console := map[string]interface{}{
-	// 	"fd":  fd,
-	// 	"log": log,
-	// }
-	// mod.Save(mod.NextPointer(), console)
-	// mod.PushContext()
-	// m := mod.Save(mod.NextPointer(), 65)
-	// mod.Call(log, -1, []compiler.Argument{compiler.PointerArgument{Value: m}})
-	// main := mod.Save(mod.NextPointer(), compiler.CreateFun(mod.PopContext()))
-	// mod.Call(main, -1, []compiler.Argument{})
-	// bin.RegisterModule(mod)
+	if err.Exists {
+		panic(err)
+	}
 
-	// compiled, err := bin.Compile()
+	fmt.Println(ast)
+	// analyzer := compiler.Analyzer{Program: ast}
+	// fmt.Printf("%+v\n\n", analyzer)
 
-	// if err != nil {
-	// 	panic(err)
-	// }
+	// analyzer.Analyze()
 
-	// // fmt.Println(compiled)
-	// os.WriteFile("main.mbin", compiled, 0644)
-	// // compiled, _ := os.ReadFile("main.mbin")
-	// runner := vm.NewVm(compiled)
-	// fmt.Println(runner.Run())
-	// fmt.Println(time.Since(start))
 }

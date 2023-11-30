@@ -168,8 +168,10 @@ func (t StructLiteral) TypeKind() type_kind {
 }
 
 type TypedParameter struct {
-	Name IdentifierExpression `json:"name"`
-	Type TypeLiteral          `json:"type"`
+	Name     IdentifierExpression `json:"name"`
+	Type     TypeLiteral          `json:"type"`
+	Variadic bool                 `json:"variadic"`
+	Location common.Location
 }
 
 type FunctionSignature interface {
@@ -229,6 +231,7 @@ type Expression interface {
 }
 
 type Definition interface {
+	Statement
 	is_definition() bool
 }
 

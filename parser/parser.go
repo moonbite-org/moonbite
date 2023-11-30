@@ -732,14 +732,25 @@ func (p *parser_s) parse_type_definition_statement() TypeDefinitionStatement {
 func (p *parser_s) parse_typed_parameter() TypedParameter {
 	defer p.catch()
 
+	start := p.might_expect([]token_kind{variadic_marker})
 	name := p.must_expect([]token_kind{identifier})
 	p.must_expect([]token_kind{whitespace, new_line})
 	p.skip_whitespace()
 	typ := p.parse_type_literal()
 
+	var location common.Location
+
+	if start != nil {
+		location = start.Location
+	} else {
+		location = name.Location
+	}
+
 	return TypedParameter{
-		Name: *p.create_ident(name),
-		Type: typ,
+		Name:     *p.create_ident(name),
+		Type:     typ,
+		Variadic: start != nil,
+		Location: location,
 	}
 }
 
@@ -1043,21 +1054,31 @@ func (p *parser_s) parse_flow_control_statement() Statement {
 	}
 }
 
-func (p *parser_s) is_left_fun() bool {
-	if p.current_expression() == nil {
+func (p *parser_s) is_left_fun(expression Expression) bool {
+	if expression == nil {
 		return false
 	}
 
-	if reflect.TypeOf(p.current_expression()) == reflect.TypeOf(AnonymousFunExpression{}) {
+	switch reflect.TypeOf(expression) {
+	case reflect.TypeOf(AnonymousFunExpression{}):
 		return true
+	case reflect.TypeOf(GroupExpression{}):
+		return p.is_left_fun(expression.(GroupExpression).Expression)
 	}
 
-	if reflect.TypeOf(p.current_expression()) == reflect.TypeOf(GroupExpression{}) {
-		inside := p.current_expression().(GroupExpression).Expression
+	return false
+}
 
-		if reflect.TypeOf(inside) == reflect.TypeOf(AnonymousFunExpression{}) {
-			return true
-		}
+func (p *parser_s) is_left_callable(expression Expression) bool {
+	if expression == nil {
+		return false
+	}
+
+	switch reflect.TypeOf(expression) {
+	case reflect.TypeOf(IdentifierExpression{}), reflect.TypeOf(MemberExpression{}):
+		return true
+	case reflect.TypeOf(GroupExpression{}):
+		return p.is_left_callable(expression.(GroupExpression).Expression)
 	}
 
 	return false
@@ -1147,6 +1168,10 @@ func (p *parser_s) continue_expression() Expression {
 		return p.continue_expression()
 	case left_angle_bracks, right_angle_bracks, binary_operator:
 		return p.parse_binary_expression()
+	// parsing typed struct literals like Slice<Int>{} are a problem
+	// because the parser cannot distinguish it from an expression like
+	// Slice < Int > {} (as in less than, greater than)
+
 	// case right_angle_bracks:
 	// 	p.advance()
 	// 	is_literal := p.might_expect([]token_kind{left_curly_bracks})
@@ -1262,6 +1287,10 @@ func (p *parser_s) parse_group_expression() Expression {
 func (p *parser_s) parse_call_expression() Expression {
 	defer p.catch()
 
+	if !p.is_left_callable(p.current_expression()) {
+		p.throw(common.ErrorMessages["uc_con"])
+	}
+
 	args := parse_seperated_list(p, p.parse_expression, comma, left_parens, right_parens, true, false)
 
 	p.set_current_expression(CallExpression{
@@ -1280,7 +1309,7 @@ func (p *parser_s) parse_member_expression() Expression {
 		p.backup()
 	}
 
-	if p.is_left_fun() {
+	if p.is_left_fun(p.current_expression()) {
 		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "read a value off of a function"))
 	}
 
@@ -1327,7 +1356,7 @@ func (p *parser_s) parse_index_expression() Expression {
 		p.must_expect([]token_kind{})
 	}
 
-	if p.is_left_fun() {
+	if p.is_left_fun(p.current_expression()) {
 		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "index a function"))
 	}
 
@@ -1586,6 +1615,7 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 		p.advance()
 	}
 
+	p.skip_whitespace()
 	return result
 }
 

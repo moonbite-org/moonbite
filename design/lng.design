@@ -121,10 +121,10 @@ fun for Console log(...messages Printable[]) {
 
 const console = Console{}
 
-type File implements [Streamable] PathBuff
+type File implements [Streamable, Observable<PathBuff>] PathBuff
 
-constructor for File {
-  syscall.stat(this) or warn(^)
+fun for File on_declared(value PathBuff) {
+  syscall.stat(value) or warn(^)
 }
 
 fun for File write(p List<Byte>) Int {
