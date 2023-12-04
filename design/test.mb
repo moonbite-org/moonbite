@@ -1,5 +1,6 @@
 package main
 
-var a = 5
-
-var b = false
+fun main() {
+  ali = veli
+  veli = deli
+}

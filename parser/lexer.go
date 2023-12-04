@@ -27,6 +27,7 @@ var keywords = map[string]token_kind{
 	"else":       else_keyword,
 	"for":        for_keyword,
 	"fun":        fun_keyword,
+	"giveup":     giveup_keyword,
 	"hidden":     hidden_keyword,
 	"if":         if_keyword,
 	"implements": implements_keyword,
@@ -163,7 +164,7 @@ func lex(input []byte, filename string) ([]Token, common.Error) {
 	}
 
 	control_chars := []rune{'(', ')', '<', '>', '[', ']', '{', '}', '.', ',', ':', ';'}
-	operator_chars := []rune{'+', '-', '*', '/', '%', '=', '^', '&', '|'}
+	operator_chars := []rune{'+', '-', '*', '/', '%', '=', '^', '&', '|', '!'}
 
 	current := lexer.current_rune()
 	for lexer.current_rune() != eof {
@@ -173,21 +174,21 @@ func lex(input []byte, filename string) ([]Token, common.Error) {
 
 		switch {
 		case unicode.IsSpace(current):
-			lexer.LexWhiteSpace()
+			lexer.lex_whitespace()
 		case slices.Contains(control_chars, current):
-			lexer.LexControlChars()
+			lexer.lex_control_chars()
 		case slices.Contains(operator_chars, current):
-			lexer.LexOperatorChars()
+			lexer.lex_operator_chars()
 		case unicode.IsDigit(current):
-			lexer.LexNumberLiteral()
+			lexer.lex_number_literal()
 		case current == '"':
-			lexer.LexStringLiteral()
+			lexer.lex_string_literal()
 		case current == '`':
-			lexer.LexMultilineStringLiteral()
+			lexer.lex_multi_line_string_literal()
 		case current == '\'':
-			lexer.LexRuneLiteral()
+			lexer.lex_rune_literal()
 		default:
-			lexer.LexAlphaNumeric()
+			lexer.lex_alpha_numeric()
 		}
 		current = lexer.current_rune()
 	}
@@ -195,7 +196,7 @@ func lex(input []byte, filename string) ([]Token, common.Error) {
 	return lexer.tokens, common.Error{}
 }
 
-func (l *lexer) LexWhiteSpace() {
+func (l *lexer) lex_whitespace() {
 	length := 0
 
 	for unicode.IsSpace(l.current_rune()) {
@@ -218,7 +219,7 @@ func (l *lexer) LexWhiteSpace() {
 	l.register_token(token)
 }
 
-func (l *lexer) LexStringLiteral() {
+func (l *lexer) lex_string_literal() {
 	length := 0
 	for l.next_rune() != '"' && l.next_rune() != eof && l.next_rune() != '\n' && l.next_rune() != '\r' {
 		if l.current_rune() == '\\' {
@@ -239,7 +240,7 @@ func (l *lexer) LexStringLiteral() {
 	}
 }
 
-func (l *lexer) LexMultilineStringLiteral() {
+func (l *lexer) lex_multi_line_string_literal() {
 	length := 0
 	for l.next_rune() != '`' && l.next_rune() != eof {
 		if l.current_rune() == '\\' {
@@ -260,7 +261,7 @@ func (l *lexer) LexMultilineStringLiteral() {
 	}
 }
 
-func (l *lexer) LexRuneLiteral() {
+func (l *lexer) lex_rune_literal() {
 	length := 0
 	for l.next_rune() != '\'' && l.next_rune() != eof && l.next_rune() != '\n' && l.next_rune() != '\r' {
 		if l.current_rune() == '\\' {
@@ -285,9 +286,8 @@ func (l *lexer) LexRuneLiteral() {
 	}
 }
 
-func (l *lexer) LexNumberLiteral() {
+func (l *lexer) lex_number_literal() {
 	length := 1
-	is_floating := false
 
 	if l.current_rune() == '0' {
 		if unicode.IsDigit(l.next_rune()) {
@@ -300,26 +300,35 @@ func (l *lexer) LexNumberLiteral() {
 	}
 
 	for unicode.IsDigit(l.next_rune()) {
-		if l.peek(2) == '.' && unicode.IsDigit(l.peek(3)) {
-			length++
-			l.advance()
-			is_floating = true
-		}
-
-		if (l.peek(2) == 'e' || l.peek(2) == 'E') && unicode.IsDigit(l.peek(3)) && is_floating {
-			length++
-			l.advance()
-		}
-
 		length++
 		l.advance()
+	}
+
+	if l.next_rune() == '.' && unicode.IsDigit(l.peek(2)) {
+		l.advance()
+		length++
+
+		for unicode.IsDigit(l.next_rune()) {
+			length++
+			l.advance()
+		}
+
+		if l.next_rune() == 'e' || l.next_rune() == 'E' {
+			l.advance()
+			length++
+
+			for unicode.IsDigit(l.next_rune()) {
+				length++
+				l.advance()
+			}
+		}
 	}
 
 	l.backup_by(length - 1)
 	l.register_token(l.create_token(number_literal, length))
 }
 
-func (l *lexer) LexSingleLineComment() {
+func (l *lexer) lex_single_line_comment() {
 	length := 0
 
 	l.backup()
@@ -342,7 +351,7 @@ func (l *lexer) LexSingleLineComment() {
 	l.register_token(l.create_token(single_line_comment, length+1))
 }
 
-func (l *lexer) LexMultiLineComment() {
+func (l *lexer) lex_multiL_line_comment() {
 	length := 0
 
 	for string(l.next_runes(2)) != "*/" && l.next_rune() != eof {
@@ -358,7 +367,7 @@ func (l *lexer) LexMultiLineComment() {
 	}
 }
 
-func (l *lexer) LexOperatorChars() {
+func (l *lexer) lex_operator_chars() {
 	var token Token
 
 	switch l.current_rune() {
@@ -386,7 +395,7 @@ func (l *lexer) LexOperatorChars() {
 		} else if next == '>' {
 			token = l.create_token(then, 2)
 		} else if unicode.IsDigit(next) {
-			l.LexNumberLiteral()
+			l.lex_number_literal()
 			return
 		} else {
 			token = l.create_token(minus, 1)
@@ -405,16 +414,18 @@ func (l *lexer) LexOperatorChars() {
 		if next == '=' {
 			token = l.create_token(arithmetic_assignment, 2)
 		} else if next == '/' {
-			l.LexSingleLineComment()
+			l.lex_single_line_comment()
 			return
 		} else if next == '*' {
-			l.LexMultiLineComment()
+			l.lex_multiL_line_comment()
 			return
 		} else {
 			token = l.create_token(forward_slash, 1)
 		}
 	case '%':
 		token = l.create_token(percent, 1)
+	case '!':
+		token = l.create_token(exclamation, 1)
 	case '&':
 		next := l.next_rune()
 
@@ -438,7 +449,7 @@ func (l *lexer) LexOperatorChars() {
 	l.register_token(token)
 }
 
-func (l *lexer) LexControlChars() {
+func (l *lexer) lex_control_chars() {
 	var token Token
 
 	switch l.current_rune() {
@@ -485,7 +496,7 @@ func (l *lexer) LexControlChars() {
 	l.register_token(token)
 }
 
-func (l *lexer) LexAlphaNumeric() {
+func (l *lexer) lex_alpha_numeric() {
 	length := 1
 
 	for unicode.IsDigit(l.next_rune()) || unicode.IsLetter(l.next_rune()) || l.next_rune() == '_' {

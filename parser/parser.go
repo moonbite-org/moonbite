@@ -185,7 +185,9 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 		p.backup()
 		return result
 	default:
+		// Could be an expression statement or an assignment statement
 		p.backup()
+		// Will record the last offset. If an assignment token is found, will go back and parse assignment statement.
 		last_offset := p.offset
 		expression := p.parse_expression()
 		p.skip_whitespace()
@@ -196,6 +198,7 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 			p.backup_by(p.offset - last_offset)
 
 			result = append(result, p.parse_assignment_statement())
+			result = append(result, p.parse_inline_level_statements()...)
 		} else {
 			result = append(result, ExpressionStatement{
 				Expression: expression,
@@ -261,6 +264,9 @@ func (p *parser_s) parse_if_statement() IfStatement {
 	p.skip_whitespace()
 
 	main_block := p.parse_predicate_block()
+	if main_block.Predicate == nil {
+		p.must_expect([]token_kind{})
+	}
 	p.skip_whitespace()
 	p.skip_comment()
 
@@ -278,7 +284,11 @@ func (p *parser_s) parse_if_statement() IfStatement {
 		if is_else_if != nil {
 			p.skip_whitespace()
 			p.skip_comment()
-			else_if_blocks = append(else_if_blocks, p.parse_predicate_block())
+			predicate := p.parse_predicate_block()
+			if predicate.Predicate == nil {
+				break
+			}
+			else_if_blocks = append(else_if_blocks, predicate)
 			current = p.current_token()
 		} else {
 			p.backup_by(skipped + 2)
@@ -360,6 +370,8 @@ func (p *parser_s) parse_declaration_statement() DeclarationStatement {
 		}
 	}
 
+	p.skip_comment()
+	p.skip_whitespace()
 	var kind var_kind
 
 	if kind_n.Literal == "var" {
@@ -939,7 +951,10 @@ func (p *parser_s) parse_block() StatementList {
 
 	p.must_expect([]token_kind{left_curly_bracks})
 	body := p.parse_inline_level_statements()
+	p.skip_comment()
+	p.skip_whitespace()
 	p.must_expect([]token_kind{right_curly_bracks})
+	p.skip_comment()
 	p.skip_whitespace()
 
 	return body
@@ -1126,24 +1141,24 @@ func (p *parser_s) continue_expression() Expression {
 		return p.continue_expression()
 	case dot:
 		p.advance()
-		next := p.must_expect([]token_kind{left_parens, whitespace, new_line, identifier})
 
-		switch next.Kind {
+		switch p.current_token().Kind {
 		case left_parens:
-			p.backup()
 			return p.parse_type_cast_expression()
-		case whitespace, new_line:
+
+		case identifier:
+			return p.parse_member_expression()
+		default:
 			// don't let the keyword as an expression outside the match expression
 			if !p.is_match_context {
 				p.backup_by(2)
 				defer p.advance()
 				p.must_expect([]token_kind{})
 			}
-			p.set_current_expression(MatchSelfExpression{location: p.current_token().Location})
-			return p.continue_expression()
-		case identifier:
 			p.backup()
-			return p.parse_member_expression()
+			p.set_current_expression(MatchSelfExpression{location: p.current_token().Location})
+			p.advance()
+			return p.continue_expression()
 		}
 	case left_parens:
 		if p.current_expression() == nil {
@@ -1184,11 +1199,13 @@ func (p *parser_s) continue_expression() Expression {
 	case plus, minus, star, forward_slash:
 		return p.parse_arithmetic_expression()
 	case increment, decrement:
-		return p.parse_stepped_operation_expression()
+		return p.parse_arithmetic_unary_expression()
 	case instanceof_keyword:
 		return p.parse_instanceof_expression()
 	case match_keyword:
 		return p.parse_match_expression()
+	case exclamation:
+		return p.parse_not_expression()
 	case fun_keyword:
 		return p.parse_anonymous_fun_expression()
 	case caret:
@@ -1230,8 +1247,6 @@ func (p *parser_s) continue_expression() Expression {
 
 		return result
 	}
-
-	return nil
 }
 
 func (p *parser_s) parse_expression() Expression {
@@ -1305,8 +1320,12 @@ func (p *parser_s) parse_member_expression() Expression {
 	defer p.catch()
 
 	if p.current_expression() == nil {
-		// if current expression is non-existent, the next lines will expect an identifier and it will throw
-		p.backup()
+		// If there is no left hand side, it could just be a match self expression
+		if p.is_match_context {
+			p.set_current_expression(MatchSelfExpression{})
+		} else {
+			p.backup()
+		}
 	}
 
 	if p.is_left_fun(p.current_expression()) {
@@ -1446,6 +1465,33 @@ func (p *parser_s) parse_binary_expression() Expression {
 	return p.continue_expression()
 }
 
+func (p *parser_s) parse_not_expression() Expression {
+	defer p.catch()
+
+	current := p.current_expression()
+	if current != nil {
+		p.must_expect([]token_kind{})
+	}
+
+	start := p.must_expect([]token_kind{exclamation})
+	skipped := p.skip_comment()
+	skipped += p.skip_whitespace()
+
+	expr := p.parse_expression()
+
+	if expr == nil {
+		p.backup_by(skipped)
+		p.must_expect([]token_kind{})
+	}
+
+	p.set_current_expression(NotExpression{
+		Expression: expr,
+		location:   start.Location,
+	})
+
+	return p.continue_expression()
+}
+
 func (p *parser_s) parse_instanceof_expression() Expression {
 	defer p.catch()
 
@@ -1468,10 +1514,10 @@ func (p *parser_s) parse_instanceof_expression() Expression {
 	return p.continue_expression()
 }
 
-func (p *parser_s) parse_stepped_operation_expression() Expression {
+func (p *parser_s) parse_arithmetic_unary_expression() Expression {
 	defer p.catch()
 
-	var kind stepped_change_operation_kind
+	var kind arithmetic_unary_kind
 	var expression Expression
 	var pre bool
 
@@ -1505,7 +1551,7 @@ func (p *parser_s) parse_stepped_operation_expression() Expression {
 		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "do this operation with a function call"))
 	}
 
-	p.set_current_expression(SteppedChangeExpression{
+	p.set_current_expression(ArithmeticUnaryExpression{
 		Expression: expression,
 		Operation:  kind,
 		Pre:        pre,
@@ -1624,11 +1670,11 @@ func (p *parser_s) parse_predicate_block() PredicateBlock {
 
 	p.must_expect([]token_kind{left_parens})
 	predicate := p.parse_expression()
-	p.must_expect([]token_kind{right_parens})
-
 	if predicate == nil {
-		p.must_expect([]token_kind{})
+		return PredicateBlock{}
 	}
+
+	p.must_expect([]token_kind{right_parens})
 
 	p.skip_whitespace()
 	last := p.body_context
@@ -1667,13 +1713,18 @@ func (p *parser_s) parse_match_expression() Expression {
 	current := p.current_token()
 	for current.Kind != right_curly_bracks && current.Kind != base_keyword {
 		p.skip_comment()
-		current = p.current_token()
+		p.skip_whitespace()
 
 		if current.Kind == right_curly_bracks || current.Kind == base_keyword {
 			break
 		}
 
-		blocks = append(blocks, p.parse_predicate_block())
+		predicate := p.parse_predicate_block()
+		if predicate.Predicate == nil {
+			break
+		}
+		blocks = append(blocks, predicate)
+		current = p.current_token()
 	}
 
 	next := p.might_expect([]token_kind{base_keyword})

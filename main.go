@@ -8,18 +8,25 @@ import (
 )
 
 func main() {
-	filepath := "/Users/muhammedalican/Documents/projects/moonbite/design/test.mb"
-	input, _ := os.ReadFile(filepath)
-	ast, err := parser.Parse(input, filepath)
+	input := []byte(`package main
+	fun main() {
+		match (data) {
+			(.) {
+				a = b
+			}
+		}
+	}
+	`)
+	ast, err := parser.Parse(input, "test.mb")
 
 	if err.Exists {
-		panic(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	fmt.Println(ast)
-	// analyzer := compiler.Analyzer{Program: ast}
-	// fmt.Printf("%+v\n\n", analyzer)
+	f := ast.Definitions[0].(*parser.UnboundFunDefinitionStatement).Body
+	m := f[0].(parser.ExpressionStatement).Expression.(parser.MatchExpression)
 
-	// analyzer.Analyze()
-
+	b := m.Blocks[0].Predicate
+	fmt.Println(b.Kind())
 }

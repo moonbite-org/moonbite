@@ -10,10 +10,12 @@ type token_kind int
 
 const (
 	eof_token_kind token_kind = iota
+	Whitespace
 	new_line
 	whitespace
 	any_whitespace
 
+	Punctuation
 	left_parens
 	right_parens
 	left_angle_bracks
@@ -28,10 +30,11 @@ const (
 	semicolon
 	variadic_marker // ...
 
+	CommentToken
 	multi_line_comment
 	single_line_comment
 
-	operator
+	Operator
 	plus
 	minus
 	star
@@ -44,6 +47,7 @@ const (
 	ampersand
 	assignment
 	arithmetic_assignment
+	exclamation
 	binary_operator // == != < > <= >= && ||
 	caret
 	channel
@@ -58,7 +62,7 @@ const (
 	bool_literal
 	cardinal_literal
 
-	keyword
+	Keyword
 	as_keyword
 	base_keyword
 	break_keyword
@@ -68,6 +72,7 @@ const (
 	else_keyword
 	for_keyword
 	fun_keyword
+	giveup_keyword
 	hidden_keyword
 	if_keyword
 	implements_keyword
@@ -111,7 +116,7 @@ var token_map = map[token_kind]string{
 	multi_line_comment:  "MultiLineComment",
 	single_line_comment: "SingleLineComment",
 
-	operator:              "Operator",
+	Operator:              "Operator",
 	plus:                  "Plus",
 	minus:                 "Minus",
 	star:                  "Star",
@@ -138,7 +143,7 @@ var token_map = map[token_kind]string{
 	bool_literal:     "BoolLiteral",
 	cardinal_literal: "CardinalLiteral",
 
-	keyword:            "Keyword",
+	Keyword:            "Keyword",
 	as_keyword:         "as",
 	base_keyword:       "base",
 	break_keyword:      "break",
@@ -148,6 +153,7 @@ var token_map = map[token_kind]string{
 	else_keyword:       "else",
 	for_keyword:        "for",
 	fun_keyword:        "fun",
+	giveup_keyword:     "giveup",
 	hidden_keyword:     "hidden",
 	if_keyword:         "if",
 	implements_keyword: "implements",
@@ -178,11 +184,9 @@ type Token struct {
 }
 
 func (t Token) String() string {
-	if t.Kind < keyword {
-		if t.Kind == whitespace {
+	if t.Kind < Keyword {
+		if t.Kind >= Whitespace && t.Kind < Punctuation {
 			return fmt.Sprintf("ws[%d:%d][%d]", t.Location.Line, t.Location.Column, t.Offset)
-		} else if t.Kind == new_line {
-			return fmt.Sprintf("nl[%d:%d][%d]", t.Location.Line, t.Location.Column, t.Offset)
 		} else {
 			return fmt.Sprintf("%s(%s)[%d:%d][%d]", token_map[t.Kind], t.Literal, t.Location.Line, t.Location.Column, t.Offset)
 		}

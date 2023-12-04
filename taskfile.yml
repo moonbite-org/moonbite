@@ -1,0 +1,13 @@
+version: '3'
+
+tasks:
+  coverage:
+    cmds:
+      - go test -coverprofile=./coverage/coverage.out -v ./...
+      - go tool cover -html=./coverage/coverage.out
+  test:
+    cmds:
+      - go test -v ./...
+  build:
+    cmds:
+      - go build -o ./dist/moonbite

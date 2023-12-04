@@ -47,17 +47,134 @@ func assert_type(t *testing.T, given, expected any) {
 	}
 }
 
+func TestToken(t *testing.T) {
+	token := parser.Token{
+		Location:   common.Location{},
+		Literal:    "",
+		Raw:        "",
+		Offset:     0,
+		LineBreaks: 0,
+	}
+
+	assert_string(t, token.String(), "End of file()[0:0][0]")
+
+	token = parser.Token{
+		Kind:       parser.Whitespace,
+		Location:   common.Location{},
+		Literal:    "",
+		Raw:        "",
+		Offset:     0,
+		LineBreaks: 0,
+	}
+
+	assert_string(t, token.String(), "ws[0:0][0]")
+
+	token = parser.Token{
+		Kind:       parser.Keyword,
+		Location:   common.Location{},
+		Literal:    "as",
+		Raw:        "as",
+		Offset:     0,
+		LineBreaks: 0,
+	}
+
+	assert_string(t, token.String(), "<as>[0:0][0]")
+}
+
+func TestLexer(t *testing.T) {
+	input := []byte("package main const s = \"")
+	_, err := parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const r = '")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const r = ''")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const r = 'ab'")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	// input = []byte("package main const r = '\\''")
+	// _, err = parser.Parse(input, "test.mb")
+
+	// assert_no_error(t, err)
+
+	input = []byte("package main const s = \"test\"")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte("package main const s = \"te\\\\\"st\"")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte(`package main
+	const multi = line
+	`)
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte("package main const multi = `line" + "\n" + "string`")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte("package main const multi = `line")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main //comment")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte("package main /* comment */")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte("package main /* comment" + "\n" + " end */")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte("package main const n = 5")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte("package main const n = 5.5")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte("package main const n = 5.0e8")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+}
+
 func TestPackageStatement(t *testing.T) {
 	input := []byte("")
 	_, err := parser.Parse(input, "test.mb")
 
-	if !err.Exists {
-		t.Errorf("expected package keyword error")
-	}
+	assert_error(t, err)
 
 	input = []byte("package main")
 	ast, err := parser.Parse(input, "test.mb")
 
+	assert_no_error(t, err)
 	assert_identifier(t, ast.Package.Name, "main")
 }
 
@@ -73,7 +190,7 @@ func TestUseStatement(t *testing.T) {
 }
 
 func TestDeclarationStatement(t *testing.T) {
-	input := []byte("package main const test = data.count")
+	input := []byte("package main const test = data")
 	ast, err := parser.Parse(input, "test.mb")
 
 	assert_no_error(t, err)
@@ -283,4 +400,115 @@ func TestMemberExpression(t *testing.T) {
 	ast, err = parser.Parse(input, "test.mb")
 
 	assert_error(t, err)
+}
+
+func TestIndexExpression(t *testing.T) {
+	input := []byte("package main const test = list[0]")
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.IndexExpression{})
+	expression := (*definition.(parser.DeclarationStatement).Value).(parser.IndexExpression)
+
+	assert_type(t, expression.Host, parser.IdentifierExpression{})
+	assert_type(t, expression.Index, parser.NumberLiteralExpression{})
+
+	input = []byte("package main const test = data.list[count()]")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.IndexExpression{})
+	expression = (*definition.(parser.DeclarationStatement).Value).(parser.IndexExpression)
+
+	assert_type(t, expression.Host, parser.MemberExpression{})
+	assert_type(t, expression.Index, parser.CallExpression{})
+
+	member := expression.Host.(parser.MemberExpression)
+	assert_string(t, member.LeftHandSide.(parser.IdentifierExpression).Value, "data")
+	assert_string(t, member.RightHandSide.Value, "list")
+
+	index := expression.Index.(parser.CallExpression)
+	assert_type(t, index.Callee, parser.IdentifierExpression{})
+	assert_string(t, index.Callee.(parser.IdentifierExpression).Value, "count")
+}
+
+func TestTypeCastExpression(t *testing.T) {
+	input := []byte("package main const test = data.(String)")
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.TypeCastExpression{})
+	expression := (*definition.(parser.DeclarationStatement).Value).(parser.TypeCastExpression)
+
+	assert_type(t, expression.Value, parser.IdentifierExpression{})
+	assert_string(t, expression.Value.(parser.IdentifierExpression).Value, "data")
+	assert_type(t, expression.Type, parser.TypeIdentifier{})
+	assert_type(t, expression.Type.Name, &parser.IdentifierExpression{})
+	assert_string(t, expression.Type.Name.(*parser.IdentifierExpression).Value, "String")
+}
+
+func TestCaretExpression(t *testing.T) {
+	input := []byte("package main const test = ^")
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.CaretExpression{})
+}
+
+func TestInstanceofExpression(t *testing.T) {
+	input := []byte("package main const test = data instanceof typ")
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.InstanceofExpression{})
+	expression := (*definition.(parser.DeclarationStatement).Value).(parser.InstanceofExpression)
+
+	assert_type(t, expression.LeftHandSide, parser.IdentifierExpression{})
+	assert_type(t, expression.RightHandSide, parser.TypeIdentifier{})
+
+	assert_string(t, expression.LeftHandSide.(parser.IdentifierExpression).Value, "data")
+	assert_string(t, expression.RightHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "typ")
+}
+
+func TestMatchSelfExpression(t *testing.T) {
+	input := []byte("package main const test = .")
+	_, err := parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte(`package main
+	fun main() {
+		match (data) {
+			(.) {}
+			(.value) {}
+			((.).(String)) {}
+		}
+	}
+	`)
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	body := ast.Definitions[0].(*parser.UnboundFunDefinitionStatement).Body
+	match := body[0].(parser.ExpressionStatement).Expression.(parser.MatchExpression)
+
+	assert_type(t, match.Blocks[0].Predicate, parser.MatchSelfExpression{})
+
+	assert_type(t, match.Blocks[1].Predicate, parser.MemberExpression{})
+	assert_type(t, match.Blocks[1].Predicate.(parser.MemberExpression).LeftHandSide, parser.MatchSelfExpression{})
+	assert_type(t, match.Blocks[1].Predicate.(parser.MemberExpression).RightHandSide, parser.IdentifierExpression{})
+	assert_string(t, match.Blocks[1].Predicate.(parser.MemberExpression).RightHandSide.Value, "value")
+
+	assert_type(t, match.Blocks[2].Predicate, parser.TypeCastExpression{})
+	assert_type(t, match.Blocks[2].Predicate.(parser.TypeCastExpression).Value.(parser.GroupExpression).Expression, parser.MatchSelfExpression{})
 }

@@ -8,7 +8,7 @@ type type_kind string
 type var_kind string
 type loop_kind string
 type literal_kind string
-type stepped_change_operation_kind string
+type arithmetic_unary_kind string
 
 const (
 	// statements
@@ -27,27 +27,28 @@ const (
 	ExpressionStatementKind           statement_kind = "statement:expression"
 	LoopStatementKind                 statement_kind = "statement:loop"
 	IfStatementKind                   statement_kind = "statement:if"
-	OrStatementKind                   statement_kind = "statement:or"
-	SingleLineCommentStatementKind    statement_kind = "statement:single_line_comment"
-	MultiLineCommentStatementKind     statement_kind = "statement:multi_line_comment"
+	// OrStatementKind                   statement_kind = "statement:or"
+	SingleLineCommentStatementKind statement_kind = "statement:single_line_comment"
+	MultiLineCommentStatementKind  statement_kind = "statement:multi_line_comment"
 
 	// expressions
-	IdentifierExpressionKind    expression_kind = "expression:identifier"
-	ArithmeticExpressionKind    expression_kind = "expression:arithmetic"
-	BinaryExpressionKind        expression_kind = "expression:binary"
-	CallExpressionKind          expression_kind = "expression:call"
-	MemberExpressionKind        expression_kind = "expression:member"
-	IndexExpressionKind         expression_kind = "expression:index"
-	MatchExpressionKind         expression_kind = "expression:match"
-	TypeCastExpressionKind      expression_kind = "expression:type-cast"
-	CaretExpressionKind         expression_kind = "expression:caret"
-	InstanceofExpressionKind    expression_kind = "expression:instanceof"
-	MatchSelfExpressionKind     expression_kind = "expression:match_self"
-	GroupExpressionKind         expression_kind = "expression:group"
-	ThisExpressionKind          expression_kind = "expression:this"
-	SteppedChangeExpressionKind expression_kind = "expression:stepped_change"
-	AnonymousFunExpressionKind  expression_kind = "expression:anonymous_fun"
-	OrExpressionKind            expression_kind = "expression:or"
+	IdentifierExpressionKind      expression_kind = "expression:identifier"
+	ArithmeticExpressionKind      expression_kind = "expression:arithmetic"
+	BinaryExpressionKind          expression_kind = "expression:binary"
+	CallExpressionKind            expression_kind = "expression:call"
+	MemberExpressionKind          expression_kind = "expression:member"
+	IndexExpressionKind           expression_kind = "expression:index"
+	MatchExpressionKind           expression_kind = "expression:match"
+	TypeCastExpressionKind        expression_kind = "expression:type-cast"
+	CaretExpressionKind           expression_kind = "expression:caret"
+	InstanceofExpressionKind      expression_kind = "expression:instanceof"
+	MatchSelfExpressionKind       expression_kind = "expression:match_self"
+	GroupExpressionKind           expression_kind = "expression:group"
+	ThisExpressionKind            expression_kind = "expression:this"
+	ArithmeticUnaryExpressionKind expression_kind = "expression:arithmetic_unary"
+	AnonymousFunExpressionKind    expression_kind = "expression:anonymous_fun"
+	OrExpressionKind              expression_kind = "expression:or"
+	NotExpressionKind             expression_kind = "expression:not"
 
 	// literal expressions
 	StringLiteralExpressionKind   expression_kind = "expression:string-literal"
@@ -85,8 +86,8 @@ const (
 	InstanceLiteralKind literal_kind = "literal:instance"
 
 	// stepped change operation
-	increment_kind stepped_change_operation_kind = "stepped:increment"
-	decrement_kind stepped_change_operation_kind = "stepped:decrement"
+	increment_kind arithmetic_unary_kind = "stepped:increment"
+	decrement_kind arithmetic_unary_kind = "stepped:decrement"
 )
 
 // func stringify_list[T printable](items []T, open, close string, keepempty bool, seperator string) string {
@@ -538,19 +539,19 @@ func (s IfStatement) Location() common.Location {
 	return s.location
 }
 
-type OrStatement struct {
-	Try      Expression `json:"try"`
-	Fail     Expression `json:"fail"`
-	location common.Location
-}
+// type OrStatement struct {
+// 	Try      Expression `json:"try"`
+// 	Fail     Expression `json:"fail"`
+// 	location common.Location
+// }
 
-func (s OrStatement) Kind() statement_kind {
-	return OrStatementKind
-}
+// func (s OrStatement) Kind() statement_kind {
+// 	return OrStatementKind
+// }
 
-func (s OrStatement) Location() common.Location {
-	return s.location
-}
+// func (s OrStatement) Location() common.Location {
+// 	return s.location
+// }
 
 type SingleLineCommentStatement struct {
 	Comment  string `json:"comment"`
@@ -921,18 +922,18 @@ func (e ThisExpression) Location() common.Location {
 	return e.location
 }
 
-type SteppedChangeExpression struct {
-	Expression Expression                    `json:"expression"`
-	Operation  stepped_change_operation_kind `json:"operation"`
-	Pre        bool                          `json:"pre"`
+type ArithmeticUnaryExpression struct {
+	Expression Expression            `json:"expression"`
+	Operation  arithmetic_unary_kind `json:"operation"`
+	Pre        bool                  `json:"pre"`
 	location   common.Location
 }
 
-func (e SteppedChangeExpression) Kind() expression_kind {
-	return SteppedChangeExpressionKind
+func (e ArithmeticUnaryExpression) Kind() expression_kind {
+	return ArithmeticUnaryExpressionKind
 }
 
-func (e SteppedChangeExpression) Location() common.Location {
+func (e ArithmeticUnaryExpression) Location() common.Location {
 	return e.location
 }
 
@@ -947,5 +948,18 @@ func (e OrExpression) Kind() expression_kind {
 }
 
 func (e OrExpression) Location() common.Location {
+	return e.location
+}
+
+type NotExpression struct {
+	Expression Expression
+	location   common.Location
+}
+
+func (e NotExpression) Kind() expression_kind {
+	return NotExpressionKind
+}
+
+func (e NotExpression) Location() common.Location {
 	return e.location
 }
