@@ -561,8 +561,6 @@ func (p *parser_s) parse_comment() Comment {
 		result = SingleLineCommentStatement{Comment: current.Literal, location: current.Location}
 	case multi_line_comment:
 		result = MultiLineCommentStatement{Comment: current.Literal, location: current.Location}
-	default:
-		result = SingleLineCommentStatement{}
 	}
 
 	p.advance()
@@ -1099,6 +1097,21 @@ func (p *parser_s) is_left_callable(expression Expression) bool {
 	return false
 }
 
+func (p *parser_s) is_left_unary_arithmetic(expression Expression) bool {
+	if expression == nil {
+		return false
+	}
+
+	switch reflect.TypeOf(expression) {
+	case reflect.TypeOf(ArithmeticUnaryExpression{}):
+		return true
+	case reflect.TypeOf(GroupExpression{}):
+		return p.is_left_unary_arithmetic(expression.(GroupExpression).Expression)
+	}
+
+	return false
+}
+
 /*
 Recursively call the continue expression and save it to a stack.
 Next expression will look at its left to determine what to be and update the stack.
@@ -1196,10 +1209,11 @@ func (p *parser_s) continue_expression() Expression {
 	// 		fmt.Println(p.current_token(), p.current_expression())
 	// 		fmt.Println("literal")
 	// 	}
-	case plus, minus, star, forward_slash:
+	case plus, minus, star, forward_slash, percent:
 		return p.parse_arithmetic_expression()
 	case increment, decrement:
-		return p.parse_arithmetic_unary_expression()
+		expression := p.parse_arithmetic_unary_expression()
+		return expression
 	case instanceof_keyword:
 		return p.parse_instanceof_expression()
 	case match_keyword:
@@ -1235,7 +1249,15 @@ func (p *parser_s) continue_expression() Expression {
 		}
 	case whitespace:
 		p.skip_whitespace()
-		return p.continue_expression()
+
+		if p.is_left_unary_arithmetic(p.current_expression()) {
+			result := p.current_expression()
+			p.pop_expression()
+
+			return result
+		} else {
+			return p.continue_expression()
+		}
 	case new_line:
 		result := p.current_expression()
 		p.pop_expression()
@@ -1402,7 +1424,7 @@ func (p *parser_s) parse_arithmetic_expression() Expression {
 		p.must_expect([]token_kind{})
 	}
 
-	operator := p.must_expect([]token_kind{plus, minus, star, forward_slash})
+	operator := p.must_expect([]token_kind{plus, minus, star, forward_slash, percent})
 	p.skip_whitespace()
 
 	rhs := p.parse_expression()
@@ -1514,35 +1536,23 @@ func (p *parser_s) parse_instanceof_expression() Expression {
 	return p.continue_expression()
 }
 
-func (p *parser_s) parse_arithmetic_unary_expression() Expression {
+func (p *parser_s) parse_arithmetic_unary_expression() ArithmeticUnaryExpression {
 	defer p.catch()
 
 	var kind arithmetic_unary_kind
 	var expression Expression
-	var pre bool
 
 	if p.current_expression() == nil {
-		token := p.must_expect([]token_kind{increment, decrement})
+		p.must_expect([]token_kind{})
+	}
 
-		if token.Kind == increment {
-			kind = increment_kind
-		} else {
-			kind = decrement_kind
-		}
+	expression = p.current_expression()
+	token := p.must_expect([]token_kind{increment, decrement})
 
-		expression = p.parse_expression()
-		pre = true
+	if token.Kind == increment {
+		kind = IncrementKind
 	} else {
-		expression = p.current_expression()
-		token := p.must_expect([]token_kind{increment, decrement})
-
-		if token.Kind == increment {
-			kind = increment_kind
-		} else {
-			kind = decrement_kind
-		}
-
-		pre = false
+		kind = DecrementKind
 	}
 
 	if reflect.TypeOf(expression) == reflect.TypeOf(CallExpression{}) {
@@ -1551,13 +1561,14 @@ func (p *parser_s) parse_arithmetic_unary_expression() Expression {
 		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "do this operation with a function call"))
 	}
 
-	p.set_current_expression(ArithmeticUnaryExpression{
+	p.skip_comment()
+	p.skip_whitespace()
+
+	return ArithmeticUnaryExpression{
 		Expression: expression,
 		Operation:  kind,
-		Pre:        pre,
-	})
-
-	return p.continue_expression()
+		Pre:        false,
+	}
 }
 
 func (p *parser_s) parse_type_cast_expression() Expression {

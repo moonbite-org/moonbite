@@ -10,11 +10,11 @@ import (
 func main() {
 	input := []byte(`package main
 	fun main() {
-		match (data) {
-			(.) {
-				a = b
-			}
-		}
+		index++ 
+		++index --index
+		2
+		2 + 2
+		2 + 2 * 3
 	}
 	`)
 	ast, err := parser.Parse(input, "test.mb")
@@ -25,8 +25,8 @@ func main() {
 	}
 
 	f := ast.Definitions[0].(*parser.UnboundFunDefinitionStatement).Body
-	m := f[0].(parser.ExpressionStatement).Expression.(parser.MatchExpression)
+	fmt.Println(f)
+	// m := f[0].(parser.ExpressionStatement).Expression.(parser.ArithmeticUnaryExpression)
 
-	b := m.Blocks[0].Predicate
-	fmt.Println(b.Kind())
+	// fmt.Println(m)
 }

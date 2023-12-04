@@ -32,6 +32,12 @@ func assert_string(t *testing.T, given, expexted string) {
 	}
 }
 
+func assert_bool(t *testing.T, given, expexted bool) {
+	if given != expexted {
+		t.Errorf("expected bool to be %t but got %t", expexted, given)
+	}
+}
+
 func assert_int(t *testing.T, given, expexted int) {
 	if given != expexted {
 		t.Errorf("expected int to be %d but got %d", expexted, given)
@@ -163,6 +169,16 @@ func TestLexer(t *testing.T) {
 	_, err = parser.Parse(input, "test.mb")
 
 	assert_no_error(t, err)
+
+	input = []byte("package main const n = 05")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const n = 500")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
 }
 
 func TestPackageStatement(t *testing.T) {
@@ -198,6 +214,38 @@ func TestDeclarationStatement(t *testing.T) {
 	definition := ast.Definitions[0]
 
 	assert_type(t, definition, parser.DeclarationStatement{})
+
+	input = []byte("package main hidden const test = data")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+
+	assert_type(t, definition, parser.DeclarationStatement{})
+	assert_bool(t, definition.(parser.DeclarationStatement).Hidden, true)
+
+	input = []byte("package main const test")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main var String test")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, definition, parser.DeclarationStatement{})
+
+	if definition.(parser.DeclarationStatement).Value != nil {
+		t.Errorf("expected expression to be nil but found %+v", definition.(parser.DeclarationStatement).Value)
+	}
+
+	input = []byte("package main var String test = 0")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
 }
 
 func TestIdentifierExpression(t *testing.T) {
@@ -259,6 +307,33 @@ func TestArithmeticExpression(t *testing.T) {
 	input = []byte("package main const test = (2 + 3 * 5")
 	ast, err = parser.Parse(input, "test.mb")
 	assert_error(t, err)
+
+	input = []byte("package main const test = 2 - 3")
+	ast, err = parser.Parse(input, "test.mb")
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.ArithmeticExpression{})
+	expression = (*definition.(parser.DeclarationStatement).Value).(parser.ArithmeticExpression)
+	assert_string(t, expression.Operator, "-")
+
+	input = []byte("package main const test = 2 / 3")
+	ast, err = parser.Parse(input, "test.mb")
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.ArithmeticExpression{})
+	expression = (*definition.(parser.DeclarationStatement).Value).(parser.ArithmeticExpression)
+	assert_string(t, expression.Operator, "/")
+
+	input = []byte("package main const test = 2 % 3")
+	ast, err = parser.Parse(input, "test.mb")
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.ArithmeticExpression{})
+	expression = (*definition.(parser.DeclarationStatement).Value).(parser.ArithmeticExpression)
+	assert_string(t, expression.Operator, "%")
 }
 
 func TestBinaryExpression(t *testing.T) {
@@ -492,6 +567,9 @@ func TestMatchSelfExpression(t *testing.T) {
 			(.) {}
 			(.value) {}
 			((.).(String)) {}
+			base {
+				// comment
+			}
 		}
 	}
 	`)
@@ -511,4 +589,137 @@ func TestMatchSelfExpression(t *testing.T) {
 
 	assert_type(t, match.Blocks[2].Predicate, parser.TypeCastExpression{})
 	assert_type(t, match.Blocks[2].Predicate.(parser.TypeCastExpression).Value.(parser.GroupExpression).Expression, parser.MatchSelfExpression{})
+
+	assert_type(t, match.BaseBlock[0], parser.SingleLineCommentStatement{})
+}
+
+func TestGroupExpression(t *testing.T) {
+	input := []byte("package main const test = (identifier)")
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.GroupExpression{})
+	expression := (*definition.(parser.DeclarationStatement).Value).(parser.GroupExpression)
+
+	assert_type(t, expression.Expression, parser.IdentifierExpression{})
+	assert_string(t, expression.Expression.(parser.IdentifierExpression).Value, "identifier")
+
+	input = []byte("package main const test = (identifier")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+}
+
+func TestThisExpression(t *testing.T) {
+	input := []byte(`package main
+	fun for Data test() {
+		return this
+	}
+	`)
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, definition, &parser.BoundFunDefinitionStatement{})
+
+	fun := definition.(*parser.BoundFunDefinitionStatement)
+	ret := fun.Body[0].(parser.ReturnStatement)
+
+	assert_type(t, *ret.Value, parser.ThisExpression{})
+
+	input = []byte(`package main
+	fun test() {
+		return this
+	}
+	`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+}
+
+func TestArithmeticUnaryExpression(t *testing.T) {
+	input := []byte(`package main 
+	fun main() {
+		index++
+		index--
+	}`)
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, definition, &parser.UnboundFunDefinitionStatement{})
+
+	fun := definition.(*parser.UnboundFunDefinitionStatement)
+
+	var expression parser.ArithmeticUnaryExpression = fun.Body[0].(parser.ExpressionStatement).Expression.(parser.ArithmeticUnaryExpression)
+
+	assert_type(t, expression, parser.ArithmeticUnaryExpression{})
+	assert_type(t, expression.Operation, parser.IncrementKind)
+	assert_bool(t, expression.Pre, false)
+
+	expression = fun.Body[1].(parser.ExpressionStatement).Expression.(parser.ArithmeticUnaryExpression)
+
+	assert_type(t, expression, parser.ArithmeticUnaryExpression{})
+	assert_type(t, expression.Operation, parser.DecrementKind)
+	assert_bool(t, expression.Pre, false)
+
+	input = []byte(`package main
+	fun main() {
+		test()++
+	}`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte(`package main
+	fun main() {
+		index++ index index-- index
+	}`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+}
+
+func TestFunExpression(t *testing.T) {
+	input := []byte(`package main 
+	const test = fun() {
+
+	}
+	`)
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, definition, parser.DeclarationStatement{})
+
+	decl := definition.(parser.DeclarationStatement)
+	assert_type(t, *decl.Value, parser.AnonymousFunExpression{})
+
+	input = []byte(`package main 
+	const test = fun<T, K>() {
+
+	}
+	`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, definition, parser.DeclarationStatement{})
+
+	decl = definition.(parser.DeclarationStatement)
+	assert_type(t, *decl.Value, parser.AnonymousFunExpression{})
+	assert_int(t, len((*decl.Value).(parser.AnonymousFunExpression).Signature.Generics), 2)
+	generics := (*decl.Value).(parser.AnonymousFunExpression).Signature.Generics
+
+	assert_type(t, generics[0].Name, &parser.IdentifierExpression{})
+	assert_string(t, generics[0].Name.(*parser.IdentifierExpression).Value, "T")
+
+	assert_type(t, generics[1].Name, &parser.IdentifierExpression{})
+	assert_string(t, generics[1].Name.(*parser.IdentifierExpression).Value, "K")
 }

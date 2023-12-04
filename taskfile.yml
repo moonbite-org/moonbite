@@ -4,7 +4,8 @@ tasks:
   coverage:
     cmds:
       - go test -coverprofile=./coverage/coverage.out -v ./...
-      - go tool cover -html=./coverage/coverage.out
+      - go tool cover -o ./coverage/coverage.html -html=./coverage/coverage.out
+      - rm ./coverage/coverage.out
   test:
     cmds:
       - go test -v ./...

@@ -27,9 +27,8 @@ const (
 	ExpressionStatementKind           statement_kind = "statement:expression"
 	LoopStatementKind                 statement_kind = "statement:loop"
 	IfStatementKind                   statement_kind = "statement:if"
-	// OrStatementKind                   statement_kind = "statement:or"
-	SingleLineCommentStatementKind statement_kind = "statement:single_line_comment"
-	MultiLineCommentStatementKind  statement_kind = "statement:multi_line_comment"
+	SingleLineCommentStatementKind    statement_kind = "statement:single_line_comment"
+	MultiLineCommentStatementKind     statement_kind = "statement:multi_line_comment"
 
 	// expressions
 	IdentifierExpressionKind      expression_kind = "expression:identifier"
@@ -85,32 +84,10 @@ const (
 	RecordLiteralKind   literal_kind = "literal:record"
 	InstanceLiteralKind literal_kind = "literal:instance"
 
-	// stepped change operation
-	increment_kind arithmetic_unary_kind = "stepped:increment"
-	decrement_kind arithmetic_unary_kind = "stepped:decrement"
+	// unary arithmetic operation
+	IncrementKind arithmetic_unary_kind = "unary:increment"
+	DecrementKind arithmetic_unary_kind = "unary:decrement"
 )
-
-// func stringify_list[T printable](items []T, open, close string, keepempty bool, seperator string) string {
-// 	result := []string{}
-// 	literal := ""
-
-// 	for _, item := range items {
-// 		result = append(result, item.String())
-// 	}
-
-// 	if len(items) != 0 {
-// 		literal += open
-// 		literal += strings.Join(result, seperator)
-// 		literal += close
-// 	} else {
-// 		if keepempty {
-// 			literal += open
-// 			literal += close
-// 		}
-// 	}
-
-// 	return literal
-// }
 
 type ConstrainedType struct {
 	Name       Expression   `json:"name"`
@@ -538,20 +515,6 @@ func (s IfStatement) Kind() statement_kind {
 func (s IfStatement) Location() common.Location {
 	return s.location
 }
-
-// type OrStatement struct {
-// 	Try      Expression `json:"try"`
-// 	Fail     Expression `json:"fail"`
-// 	location common.Location
-// }
-
-// func (s OrStatement) Kind() statement_kind {
-// 	return OrStatementKind
-// }
-
-// func (s OrStatement) Location() common.Location {
-// 	return s.location
-// }
 
 type SingleLineCommentStatement struct {
 	Comment  string `json:"comment"`

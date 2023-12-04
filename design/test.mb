@@ -1,6 +1,7 @@
 package main
 
 fun main() {
-  ali = veli
-  veli = deli
+  count
+  count--
+  --count
 }
