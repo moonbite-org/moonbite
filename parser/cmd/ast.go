@@ -1,6 +1,8 @@
 package parser
 
-import "github.com/moonbite-org/moonbite/common"
+import (
+	common "github.com/moonbite-org/moonbite/parser/common"
+)
 
 type statement_kind string
 type expression_kind string

@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/moonbite-org/moonbite/common"
-	"github.com/moonbite-org/moonbite/parser"
+	parser "github.com/moonbite-org/moonbite/parser/cmd"
+	common "github.com/moonbite-org/moonbite/parser/common"
 )
 
 func assert_identifier(t *testing.T, given parser.IdentifierExpression, expected string) {

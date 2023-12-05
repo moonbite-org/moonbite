@@ -1,4 +1,4 @@
-package common
+package config
 
 type config struct {
 	ArchiveName  string

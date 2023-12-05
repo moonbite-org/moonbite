@@ -5,7 +5,7 @@ import (
 	"path"
 	"reflect"
 
-	"github.com/moonbite-org/moonbite/common"
+	common "github.com/moonbite-org/moonbite/parser/common"
 )
 
 // extra allowed keywords inside code blocks

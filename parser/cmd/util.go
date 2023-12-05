@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/moonbite-org/moonbite/common"
+	common "github.com/moonbite-org/moonbite/parser/common"
 )
 
 func (p *parser_s) throw(reason string) {

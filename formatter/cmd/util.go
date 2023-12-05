@@ -3,7 +3,7 @@ package formatter
 import (
 	"fmt"
 
-	"github.com/moonbite-org/moonbite/parser"
+	parser "github.com/moonbite-org/moonbite/parser/cmd"
 )
 
 func empty_expression(e *parser.Expression, pad_left, pad_right bool) string {

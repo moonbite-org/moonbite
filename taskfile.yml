@@ -1,14 +1,37 @@
 version: '3'
 
 tasks:
-  coverage:
-    cmds:
-      - go test -coverprofile=./coverage/coverage.out -v ./...
-      - go tool cover -o ./coverage/coverage.html -html=./coverage/coverage.out
-      - rm ./coverage/coverage.out
   test:
     cmds:
-      - go test -v ./...
+      - task test-parser
+      - task test-formatter
+  coverage:
+    cmds:
+      - task coverage-parser
+      - task coverage-formatter
+  coverage-parser:
+    cmds:
+      - go test -coverprofile=./coverage/parser.out -v ./parser/cmd
+      - go tool cover -o ./coverage/parser.html -html=./coverage/parser.out
+      - rm ./coverage/parser.out
+  test-parser:
+    cmds:
+      - go test -v ./parser/cmd
+  coverage-formatter:
+    cmds:
+      - go test -coverprofile=./coverage/formatter.out -v ./formatter/cmd
+      - go tool cover -o ./coverage/formatter.html -html=./coverage/formatter.out
+      - rm ./coverage/formatter.out
+  test-formatter:
+    cmds:
+      - go test -v ./parser/cmd
   build:
     cmds:
-      - go build -o ./dist/moonbite
+      - task build-parser
+      - task build-formatter
+  build-parser:
+    cmds:
+      - cd parser && go build -ldflags "-s -w" -o ../dist/moonp && cd ..
+  build-formatter:
+    cmds:
+      - cd formatter && go build -ldflags "-s -w" -o ../dist/moonf && cd ..

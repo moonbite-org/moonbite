@@ -3,7 +3,7 @@ package formatter
 import (
 	"fmt"
 
-	"github.com/moonbite-org/moonbite/parser"
+	parser "github.com/moonbite-org/moonbite/parser/cmd"
 )
 
 func FormatExpression(e parser.Expression) string {

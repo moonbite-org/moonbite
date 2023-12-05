@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/moonbite-org/moonbite/common"
+	common "github.com/moonbite-org/moonbite/parser/common"
 )
 
 type lexer struct {

@@ -3,7 +3,7 @@ package formatter
 import (
 	"strings"
 
-	"github.com/moonbite-org/moonbite/parser"
+	parser "github.com/moonbite-org/moonbite/parser/cmd"
 )
 
 const space = " "
