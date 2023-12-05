@@ -423,7 +423,12 @@ func (l *lexer) lex_operator_chars() {
 			token = l.create_token(forward_slash, 1)
 		}
 	case '%':
-		token = l.create_token(percent, 1)
+		next := l.next_rune()
+		if next == '=' {
+			token = l.create_token(arithmetic_assignment, 2)
+		} else {
+			token = l.create_token(percent, 1)
+		}
 	case '!':
 		token = l.create_token(exclamation, 1)
 	case '&':

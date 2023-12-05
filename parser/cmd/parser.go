@@ -135,7 +135,7 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 	p.skip()
 	result := StatementList{}
 
-	allowed := []token_kind{var_keyword, const_keyword, for_keyword, match_keyword, if_keyword, identifier, right_curly_bracks, single_line_comment, multi_line_comment, assignment, arithmetic_assignment, hidden_keyword}
+	allowed := []token_kind{var_keyword, const_keyword, for_keyword, match_keyword, if_keyword, identifier, right_curly_bracks, single_line_comment, multi_line_comment, hidden_keyword}
 	allowed = append(allowed, p.body_context...)
 
 	if p.is_this_context {
@@ -152,10 +152,6 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 	case var_keyword, const_keyword:
 		p.backup()
 		result = append(result, p.parse_declaration_statement())
-		result = append(result, p.parse_inline_level_statements()...)
-	case assignment, arithmetic_assignment:
-		p.backup()
-		result = append(result, p.parse_assignment_statement())
 		result = append(result, p.parse_inline_level_statements()...)
 	case return_keyword:
 		p.backup()
@@ -770,6 +766,7 @@ func (p *parser_s) parse_trait_definition_statement() TraitDefinitionStatement {
 		p.skip()
 		p.must_expect([]token_kind{trait_keyword})
 	} else {
+		p.skip()
 		start = p.must_expect([]token_kind{trait_keyword})
 	}
 
@@ -802,8 +799,8 @@ func (p *parser_s) parse_trait_definition_statement() TraitDefinitionStatement {
 		p.skip()
 	}
 
+	p.skip()
 	result.Definition = parse_seperated_list(p, p.parse_unbound_fun_signature, semicolon, left_curly_bracks, right_curly_bracks, true, true)
-
 	p.skip()
 
 	return result
@@ -1146,6 +1143,10 @@ func (p *parser_s) continue_expression() Expression {
 		}
 		return p.continue_expression()
 	case identifier:
+		if p.current_expression() != nil {
+			p.backup()
+			return p.current_expression()
+		}
 		ident := p.create_ident(p.current_token())
 		p.advance()
 		p.set_current_expression(*ident)

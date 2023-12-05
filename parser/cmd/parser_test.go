@@ -252,10 +252,306 @@ func TestDeclarationStatement(t *testing.T) {
 		t.Errorf("expected expression to be nil but found %+v", definition.(parser.DeclarationStatement).Value)
 	}
 
-	input = []byte("package main var String test = 0")
+	input = []byte("package main var String test = []")
 	ast, err = parser.Parse(input, "test.mb")
 
 	assert_no_error(t, err)
+
+	input = []byte("package main var String test = T{}")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+}
+
+func TestAssignmentStatement(t *testing.T) {
+	input := []byte(`package main
+	fun main() {
+		count = 0
+		count += 10
+		count -= 1
+		count /= 3
+		count *= 4
+		count %= 10
+	}
+	`)
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	body := definition.(*parser.UnboundFunDefinitionStatement).Body
+
+	assert_type(t, body[0], parser.AssignmentStatement{})
+	assert_string(t, body[0].(parser.AssignmentStatement).Operator, "=")
+	assert_type(t, body[0].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
+	assert_string(t, body[0].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
+	assert_type(t, body[0].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
+	assert_int(t, body[0].(parser.AssignmentStatement).RightHandSide.(parser.NumberLiteralExpression).Value.Value.(int), 0)
+
+	assert_type(t, body[1], parser.AssignmentStatement{})
+	assert_string(t, body[1].(parser.AssignmentStatement).Operator, "+=")
+	assert_type(t, body[1].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
+	assert_string(t, body[1].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
+	assert_type(t, body[1].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
+	assert_int(t, body[1].(parser.AssignmentStatement).RightHandSide.(parser.NumberLiteralExpression).Value.Value.(int), 10)
+
+	assert_type(t, body[2], parser.AssignmentStatement{})
+	assert_string(t, body[2].(parser.AssignmentStatement).Operator, "-=")
+	assert_type(t, body[2].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
+	assert_string(t, body[2].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
+	assert_type(t, body[2].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
+	assert_int(t, body[2].(parser.AssignmentStatement).RightHandSide.(parser.NumberLiteralExpression).Value.Value.(int), 1)
+
+	assert_type(t, body[3], parser.AssignmentStatement{})
+	assert_string(t, body[3].(parser.AssignmentStatement).Operator, "/=")
+	assert_type(t, body[3].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
+	assert_string(t, body[3].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
+	assert_type(t, body[3].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
+	assert_int(t, body[3].(parser.AssignmentStatement).RightHandSide.(parser.NumberLiteralExpression).Value.Value.(int), 3)
+
+	assert_type(t, body[4], parser.AssignmentStatement{})
+	assert_string(t, body[4].(parser.AssignmentStatement).Operator, "*=")
+	assert_type(t, body[4].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
+	assert_string(t, body[4].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
+	assert_type(t, body[4].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
+	assert_int(t, body[4].(parser.AssignmentStatement).RightHandSide.(parser.NumberLiteralExpression).Value.Value.(int), 4)
+
+	assert_type(t, body[5], parser.AssignmentStatement{})
+	assert_string(t, body[5].(parser.AssignmentStatement).Operator, "%=")
+	assert_type(t, body[5].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
+	assert_string(t, body[5].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
+	assert_type(t, body[5].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
+	assert_int(t, body[5].(parser.AssignmentStatement).RightHandSide.(parser.NumberLiteralExpression).Value.Value.(int), 10)
+}
+
+func TestTypeDefinitionStatement(t *testing.T) {
+	input := []byte(`package main
+	type String string
+	type String implements [Observable<string>] Saturable<string>
+	type Data {
+		key typ;
+		key2 typ2;
+	}
+	type Data string & bool
+	type Data string | bool
+	type Data string & (bool | int)
+	type Data string("data")
+	`)
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0].(parser.TypeDefinitionStatement)
+	assert_type(t, definition, parser.TypeDefinitionStatement{})
+	assert_type(t, definition.Name, parser.IdentifierExpression{})
+	assert_string(t, definition.Name.Value, "String")
+	assert_type(t, definition.Definition, parser.TypeIdentifier{})
+	assert_type(t, definition.Definition.(parser.TypeIdentifier).Name, &parser.IdentifierExpression{})
+	assert_string(t, definition.Definition.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "string")
+	assert_int(t, len(definition.Generics), 0)
+	assert_int(t, len(definition.Implementations), 0)
+
+	definition = ast.Definitions[1].(parser.TypeDefinitionStatement)
+	assert_type(t, definition, parser.TypeDefinitionStatement{})
+	assert_type(t, definition.Name, parser.IdentifierExpression{})
+	assert_string(t, definition.Name.Value, "String")
+	assert_type(t, definition.Definition, parser.TypeIdentifier{})
+	assert_type(t, definition.Definition.(parser.TypeIdentifier).Name, &parser.IdentifierExpression{})
+	assert_string(t, definition.Definition.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "Saturable")
+	assert_int(t, len(definition.Generics), 0)
+	assert_int(t, len(definition.Implementations), 1)
+	assert_type(t, definition.Implementations[0], parser.TypeIdentifier{})
+	assert_type(t, definition.Implementations[0].Name, &parser.IdentifierExpression{})
+	assert_string(t, definition.Implementations[0].Name.(*parser.IdentifierExpression).Value, "Observable")
+
+	definition = ast.Definitions[2].(parser.TypeDefinitionStatement)
+	assert_type(t, definition, parser.TypeDefinitionStatement{})
+	assert_type(t, definition.Name, parser.IdentifierExpression{})
+	assert_string(t, definition.Name.Value, "Data")
+	assert_type(t, definition.Definition, parser.StructLiteral{})
+	literal := definition.Definition.(parser.StructLiteral)
+
+	assert_int(t, len(literal), 2)
+	assert_type(t, literal[0], parser.ValueTypePair{})
+	assert_string(t, literal[0].Key.Value, "key")
+	assert_type(t, literal[0].Type, parser.TypeIdentifier{})
+	assert_string(t, literal[0].Type.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "typ")
+	assert_type(t, literal[1], parser.ValueTypePair{})
+	assert_string(t, literal[1].Key.Value, "key2")
+	assert_type(t, literal[1].Type, parser.TypeIdentifier{})
+	assert_string(t, literal[1].Type.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "typ2")
+
+	definition = ast.Definitions[3].(parser.TypeDefinitionStatement)
+	assert_type(t, definition, parser.TypeDefinitionStatement{})
+	assert_type(t, definition.Name, parser.IdentifierExpression{})
+	assert_string(t, definition.Name.Value, "Data")
+	assert_type(t, definition.Definition, parser.OperatedType{})
+	operated := definition.Definition.(parser.OperatedType)
+
+	assert_string(t, operated.Operator, "&")
+	assert_type(t, operated.LeftHandSide, parser.TypeIdentifier{})
+	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "string")
+	assert_type(t, operated.RightHandSide, parser.TypeIdentifier{})
+	assert_string(t, operated.RightHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "bool")
+
+	definition = ast.Definitions[4].(parser.TypeDefinitionStatement)
+	assert_type(t, definition, parser.TypeDefinitionStatement{})
+	assert_type(t, definition.Name, parser.IdentifierExpression{})
+	assert_string(t, definition.Name.Value, "Data")
+	assert_type(t, definition.Definition, parser.OperatedType{})
+	operated = definition.Definition.(parser.OperatedType)
+
+	assert_string(t, operated.Operator, "|")
+	assert_type(t, operated.LeftHandSide, parser.TypeIdentifier{})
+	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "string")
+	assert_type(t, operated.RightHandSide, parser.TypeIdentifier{})
+	assert_string(t, operated.RightHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "bool")
+
+	definition = ast.Definitions[5].(parser.TypeDefinitionStatement)
+	assert_type(t, definition, parser.TypeDefinitionStatement{})
+	assert_type(t, definition.Name, parser.IdentifierExpression{})
+	assert_string(t, definition.Name.Value, "Data")
+	assert_type(t, definition.Definition, parser.OperatedType{})
+	operated = definition.Definition.(parser.OperatedType)
+
+	assert_string(t, operated.Operator, "&")
+	assert_type(t, operated.LeftHandSide, parser.TypeIdentifier{})
+	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "string")
+	assert_type(t, operated.RightHandSide, parser.GroupType{})
+	assert_type(t, operated.RightHandSide.(parser.GroupType).Type, parser.OperatedType{})
+	operated = operated.RightHandSide.(parser.GroupType).Type.(parser.OperatedType)
+	assert_string(t, operated.Operator, "|")
+
+	definition = ast.Definitions[6].(parser.TypeDefinitionStatement)
+	assert_type(t, definition, parser.TypeDefinitionStatement{})
+	assert_type(t, definition.Name, parser.IdentifierExpression{})
+	assert_string(t, definition.Name.Value, "Data")
+	assert_type(t, definition.Definition, parser.TypedLiteral{})
+	typed_literal := definition.Definition.(parser.TypedLiteral)
+
+	assert_type(t, typed_literal.Type, parser.TypeIdentifier{})
+	assert_string(t, typed_literal.Type.Name.(*parser.IdentifierExpression).Value, "string")
+	assert_type(t, typed_literal.Literal, parser.StringLiteralExpression{})
+	assert_string(t, typed_literal.Literal.(parser.StringLiteralExpression).Value, "data")
+}
+
+func TestIfStatement(t *testing.T) {
+	input := []byte(`package main
+	fun main() {
+		if (true) {
+			count++
+		}
+
+		if (boolean) {
+			count++
+		}else {
+			count--
+		}
+
+		if (boolean) {
+			count++
+		}else if (other) {
+			count = 0
+		}else {
+			count--
+		}
+	}
+	`)
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	body := ast.Definitions[0].(*parser.UnboundFunDefinitionStatement).Body
+	assert_int(t, len(body), 3)
+
+	assert_type(t, body[0], parser.IfStatement{})
+	statement := body[0].(parser.IfStatement)
+	assert_type(t, statement.MainBlock.Predicate, parser.BoolLiteralExpression{})
+	assert_int(t, len(statement.MainBlock.Body), 1)
+	assert_int(t, len(statement.ElseIfBlocks), 0)
+	assert_int(t, len(statement.ElseBlock), 0)
+
+	statement = body[1].(parser.IfStatement)
+	assert_type(t, statement.MainBlock.Predicate, parser.IdentifierExpression{})
+	assert_int(t, len(statement.MainBlock.Body), 1)
+	assert_int(t, len(statement.ElseIfBlocks), 0)
+	assert_int(t, len(statement.ElseBlock), 1)
+
+	statement = body[2].(parser.IfStatement)
+	assert_type(t, statement.MainBlock.Predicate, parser.IdentifierExpression{})
+	assert_int(t, len(statement.MainBlock.Body), 1)
+	assert_int(t, len(statement.ElseIfBlocks), 1)
+	assert_type(t, statement.ElseIfBlocks[0], parser.PredicateBlock{})
+	assert_int(t, len(statement.ElseIfBlocks[0].Body), 1)
+	assert_int(t, len(statement.ElseBlock), 1)
+}
+
+func TestTraitDefinitionStatement(t *testing.T) {
+	input := []byte(`package main
+	trait Greeter {
+		fun greet(name String) String
+	}
+
+	hidden trait LobbyBoy<T Warning> mimics [Greeter, Repeater] {
+		fun welcome(name String) String
+	}
+	`)
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	trait := ast.Definitions[0].(parser.TraitDefinitionStatement)
+	assert_string(t, trait.Name.Value, "Greeter")
+	assert_int(t, len(trait.Definition), 1)
+	assert_int(t, len(trait.Generics), 0)
+	assert_int(t, len(trait.Mimics), 0)
+	assert_string(t, trait.Definition[0].Name.Value, "greet")
+
+	trait = ast.Definitions[1].(parser.TraitDefinitionStatement)
+	assert_bool(t, trait.Hidden, true)
+	assert_string(t, trait.Name.Value, "LobbyBoy")
+	assert_int(t, len(trait.Definition), 1)
+	assert_string(t, trait.Definition[0].Name.Value, "welcome")
+	assert_int(t, len(trait.Generics), 1)
+	assert_int(t, len(trait.Mimics), 2)
+	assert_string(t, (*trait.Definition[0].ReturnType).(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "String")
+}
+
+func TestLoopStatement(t *testing.T) {
+	input := []byte(`package main
+	fun main() {
+		for (true) {}
+
+		for (key, value of iterator) {}
+
+		for (, value of iterator) {}
+
+		for (var i = 0; i < 10; i++) {}
+	}
+	`)
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	body := ast.Definitions[0].(*parser.UnboundFunDefinitionStatement).Body
+
+	assert_type(t, body[0], parser.LoopStatement{})
+	assert_type(t, body[0].(parser.LoopStatement).Predicate, parser.UnipartiteLoopPredicate{})
+
+	assert_type(t, body[1], parser.LoopStatement{})
+	assert_type(t, body[1].(parser.LoopStatement).Predicate, parser.BipartiteLoopPredicate{})
+
+	assert_type(t, body[2], parser.LoopStatement{})
+	assert_type(t, body[2].(parser.LoopStatement).Predicate, parser.BipartiteLoopPredicate{})
+	if body[2].(parser.LoopStatement).Predicate.(parser.BipartiteLoopPredicate).Key != nil {
+		t.Errorf("expected key to be nil but found %+v", body[2].(parser.LoopStatement).Predicate.(parser.BipartiteLoopPredicate).Key)
+	}
+	assert_string(t, body[2].(parser.LoopStatement).Predicate.(parser.BipartiteLoopPredicate).Value.Value, "value")
+	assert_type(t, body[2].(parser.LoopStatement).Predicate.(parser.BipartiteLoopPredicate).Iterator, parser.IdentifierExpression{})
+	assert_string(t, body[2].(parser.LoopStatement).Predicate.(parser.BipartiteLoopPredicate).Iterator.(parser.IdentifierExpression).Value, "iterator")
+
+	assert_type(t, body[3], parser.LoopStatement{})
+	assert_type(t, body[3].(parser.LoopStatement).Predicate, parser.TripartiteLoopPredicate{})
 }
 
 func TestIdentifierExpression(t *testing.T) {
