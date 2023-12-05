@@ -71,11 +71,11 @@ func (p *parser_s) skip_whitespace() int {
 	return count
 }
 
-func (p *parser_s) skip_comment() int {
+func (p *parser_s) skip() int {
 	count := 0
-	for p.current_token().Kind == single_line_comment || p.current_token().Kind == multi_line_comment {
+
+	for p.current_token().Kind == single_line_comment || p.current_token().Kind == multi_line_comment || p.current_token().Kind == whitespace || p.current_token().Kind == new_line {
 		p.advance()
-		count += p.skip_whitespace()
 		count++
 	}
 	return count
@@ -165,7 +165,7 @@ func parse_seperated_list[T any](p *parser_s, parser_func func() T, seperator to
 	result := []T{}
 	p.must_expect([]token_kind{opener})
 	p.skip_whitespace()
-	p.skip_comment()
+	p.skip()
 
 	is_closing := p.might_expect([]token_kind{closer})
 
@@ -179,15 +179,15 @@ func parse_seperated_list[T any](p *parser_s, parser_func func() T, seperator to
 		value := parser_func()
 		result = append(result, value)
 		p.skip_whitespace()
-		p.skip_comment()
+		p.skip()
 		next := p.must_expect([]token_kind{seperator, closer})
 		p.skip_whitespace()
-		p.skip_comment()
+		p.skip()
 
 		switch next.Kind {
 		case seperator:
 			p.skip_whitespace()
-			p.skip_comment()
+			p.skip()
 			if p.current_token().Kind == closer && trailing_seperator {
 				p.advance()
 				done = true

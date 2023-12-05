@@ -108,6 +108,11 @@ func TestLexer(t *testing.T) {
 
 	assert_error(t, err)
 
+	input = []byte("package main const r = 'a'")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
 	// input = []byte("package main const r = '\\''")
 	// _, err = parser.Parse(input, "test.mb")
 
@@ -149,6 +154,11 @@ func TestLexer(t *testing.T) {
 	_, err = parser.Parse(input, "test.mb")
 
 	assert_no_error(t, err)
+
+	input = []byte("package main /* comment")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
 
 	input = []byte("package main /* comment" + "\n" + " end */")
 	_, err = parser.Parse(input, "test.mb")
@@ -536,6 +546,20 @@ func TestCaretExpression(t *testing.T) {
 
 	definition := ast.Definitions[0]
 	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.CaretExpression{})
+
+	input = []byte("package main const test = data.^")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte("package main const test = ^ instanceof Warning")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.InstanceofExpression{})
+	assert_type(t, (*definition.(parser.DeclarationStatement).Value).(parser.InstanceofExpression).LeftHandSide, parser.CaretExpression{})
 }
 
 func TestInstanceofExpression(t *testing.T) {
@@ -590,7 +614,7 @@ func TestMatchSelfExpression(t *testing.T) {
 	assert_type(t, match.Blocks[2].Predicate, parser.TypeCastExpression{})
 	assert_type(t, match.Blocks[2].Predicate.(parser.TypeCastExpression).Value.(parser.GroupExpression).Expression, parser.MatchSelfExpression{})
 
-	assert_type(t, match.BaseBlock[0], parser.SingleLineCommentStatement{})
+	assert_int(t, len(match.BaseBlock), 0)
 }
 
 func TestGroupExpression(t *testing.T) {
@@ -722,4 +746,133 @@ func TestFunExpression(t *testing.T) {
 
 	assert_type(t, generics[1].Name, &parser.IdentifierExpression{})
 	assert_string(t, generics[1].Name.(*parser.IdentifierExpression).Value, "K")
+
+	input = []byte(`package main 
+	const test = fun(data Int) String {
+		var count = data
+		count++
+		console.log(count)
+	}
+	`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition = ast.Definitions[0]
+	decl = definition.(parser.DeclarationStatement)
+	assert_type(t, definition, parser.DeclarationStatement{})
+
+	expression := (*decl.Value).(parser.AnonymousFunExpression)
+	assert_int(t, len(expression.Signature.Generics), 0)
+	assert_int(t, len(expression.Signature.Parameters), 1)
+	assert_int(t, len(expression.Body), 3)
+
+	assert_string(t, expression.Signature.Parameters[0].Name.Value, "data")
+	assert_type(t, *expression.Signature.ReturnType, parser.TypeIdentifier{})
+	assert_string(t, (*expression.Signature.ReturnType).(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "String")
+
+	input = []byte(`package main 
+	const test = fun(data Int) String {
+	`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte(`package main 
+	const test = fun(data) String {}
+	`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte(`package main 
+	const test = fun( String {}
+	`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte(`package main 
+	const test = fun(): String {}
+	`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte(`package main 
+	const test = fun()
+	`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+}
+
+func TestOrExpression(t *testing.T) {
+	input := []byte(`package main 
+	const test = read_file() or 0
+	const test = read_file() or giveup
+	`)
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	decl := definition.(parser.DeclarationStatement)
+
+	assert_type(t, *decl.Value, parser.OrExpression{})
+	expression := (*decl.Value).(parser.OrExpression)
+
+	assert_type(t, expression.LeftHandSide, parser.CallExpression{})
+	assert_type(t, expression.RightHandSide, parser.NumberLiteralExpression{})
+
+	definition = ast.Definitions[1]
+	decl = definition.(parser.DeclarationStatement)
+
+	assert_type(t, *decl.Value, parser.OrExpression{})
+	expression = (*decl.Value).(parser.OrExpression)
+
+	assert_type(t, expression.LeftHandSide, parser.CallExpression{})
+	assert_type(t, expression.RightHandSide, parser.GiveupExpression{})
+
+	input = []byte(`package main
+	const test = read_file or 0
+	`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte(`package main
+	const test = 2 + 2 or 0
+	`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+}
+
+func TestNotExpression(t *testing.T) {
+	input := []byte(`package main 
+	const test = !is_admin
+	const test = !(2 * 2)
+	`)
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	decl := definition.(parser.DeclarationStatement)
+
+	assert_type(t, *decl.Value, parser.NotExpression{})
+	expression := (*decl.Value).(parser.NotExpression)
+
+	assert_type(t, expression.Expression, parser.IdentifierExpression{})
+	assert_string(t, expression.Expression.(parser.IdentifierExpression).Value, "is_admin")
+
+	definition = ast.Definitions[1]
+	decl = definition.(parser.DeclarationStatement)
+
+	assert_type(t, *decl.Value, parser.NotExpression{})
+	expression = (*decl.Value).(parser.NotExpression)
+
+	assert_type(t, expression.Expression, parser.GroupExpression{})
+	assert_type(t, expression.Expression.(parser.GroupExpression).Expression, parser.ArithmeticExpression{})
 }

@@ -48,6 +48,7 @@ const (
 	AnonymousFunExpressionKind    expression_kind = "expression:anonymous_fun"
 	OrExpressionKind              expression_kind = "expression:or"
 	NotExpressionKind             expression_kind = "expression:not"
+	GiveupExpressionKind          expression_kind = "expression:giveup"
 
 	// literal expressions
 	StringLiteralExpressionKind   expression_kind = "expression:string-literal"
@@ -924,5 +925,17 @@ func (e NotExpression) Kind() expression_kind {
 }
 
 func (e NotExpression) Location() common.Location {
+	return e.location
+}
+
+type GiveupExpression struct {
+	location common.Location
+}
+
+func (e GiveupExpression) Kind() expression_kind {
+	return GiveupExpressionKind
+}
+
+func (e GiveupExpression) Location() common.Location {
 	return e.location
 }

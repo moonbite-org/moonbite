@@ -91,7 +91,7 @@ func (p *parser_s) parse_top_level_statements() TopLevelResult {
 
 	if token.Kind == hidden_keyword {
 		p.must_expect([]token_kind{whitespace, new_line})
-		ws := p.skip_whitespace()
+		ws := p.skip()
 
 		token = p.might_only_expect([]token_kind{type_keyword, trait_keyword, fun_keyword, var_keyword, const_keyword})
 		p.backup_by(1 /* current token */ + ws /* other whtitespaces */ + 1 /* required whitespace */)
@@ -132,7 +132,7 @@ func (p *parser_s) parse_top_level_statements() TopLevelResult {
 func (p *parser_s) parse_inline_level_statements() StatementList {
 	defer p.catch()
 
-	p.skip_whitespace()
+	p.skip()
 	result := StatementList{}
 
 	allowed := []token_kind{var_keyword, const_keyword, for_keyword, match_keyword, if_keyword, identifier, right_curly_bracks, single_line_comment, multi_line_comment, assignment, arithmetic_assignment, hidden_keyword}
@@ -190,7 +190,7 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 		// Will record the last offset. If an assignment token is found, will go back and parse assignment statement.
 		last_offset := p.offset
 		expression := p.parse_expression()
-		p.skip_whitespace()
+		p.skip()
 
 		is_assignment := p.might_expect([]token_kind{assignment, arithmetic_assignment})
 
@@ -217,10 +217,10 @@ func (p *parser_s) parse_package_statement() PackageStatement {
 
 	p.must_expect([]token_kind{package_keyword})
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	ident := p.must_expect([]token_kind{identifier})
 	p.must_expect([]token_kind{whitespace, new_line, eof_token_kind})
-	p.skip_whitespace()
+	p.skip()
 
 	statement := PackageStatement{
 		Name:     *p.create_ident(ident),
@@ -235,10 +235,10 @@ func (p *parser_s) parse_use_statement() UseStatement {
 
 	p.must_expect([]token_kind{use_keyword})
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	ident := p.must_expect([]token_kind{identifier})
 	p.must_expect([]token_kind{whitespace, new_line, eof_token_kind})
-	p.skip_whitespace()
+	p.skip()
 	as := p.might_expect([]token_kind{as_keyword})
 
 	statement := UseStatement{
@@ -250,7 +250,7 @@ func (p *parser_s) parse_use_statement() UseStatement {
 		p.must_expect([]token_kind{whitespace, new_line})
 		ident := p.must_expect([]token_kind{identifier})
 		p.must_expect([]token_kind{whitespace, new_line, eof_token_kind})
-		p.skip_whitespace()
+		p.skip()
 		statement.As = p.create_ident(ident)
 	}
 
@@ -261,14 +261,13 @@ func (p *parser_s) parse_if_statement() IfStatement {
 	defer p.catch()
 
 	start := p.must_expect([]token_kind{if_keyword})
-	p.skip_whitespace()
+	p.skip()
 
 	main_block := p.parse_predicate_block()
 	if main_block.Predicate == nil {
 		p.must_expect([]token_kind{})
 	}
-	p.skip_whitespace()
-	p.skip_comment()
+	p.skip()
 
 	else_if_blocks := []PredicateBlock{}
 	else_block := StatementList{}
@@ -277,13 +276,11 @@ func (p *parser_s) parse_if_statement() IfStatement {
 	for current.Kind == else_keyword {
 		p.advance()
 		p.must_expect([]token_kind{whitespace, new_line})
-		skipped := p.skip_whitespace()
-		skipped += p.skip_comment()
+		skipped := p.skip()
 		is_else_if := p.might_expect([]token_kind{if_keyword})
 
 		if is_else_if != nil {
-			p.skip_whitespace()
-			p.skip_comment()
+			p.skip()
 			predicate := p.parse_predicate_block()
 			if predicate.Predicate == nil {
 				break
@@ -299,8 +296,7 @@ func (p *parser_s) parse_if_statement() IfStatement {
 	is_else := p.might_expect([]token_kind{else_keyword})
 
 	if is_else != nil {
-		p.skip_whitespace()
-		p.skip_comment()
+		p.skip()
 		last := p.body_context
 		p.body_context = predicate_body_context
 		else_block = p.parse_block()
@@ -324,7 +320,7 @@ func (p *parser_s) parse_declaration_statement() DeclarationStatement {
 
 	if is_hidden != nil {
 		start = *is_hidden
-		p.skip_whitespace()
+		p.skip()
 		kind_n = p.must_expect([]token_kind{var_keyword, const_keyword})
 	} else {
 		start = p.must_expect([]token_kind{var_keyword, const_keyword})
@@ -332,10 +328,10 @@ func (p *parser_s) parse_declaration_statement() DeclarationStatement {
 	}
 
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 
 	p.advance()
-	ws := p.skip_whitespace()
+	ws := p.skip()
 	next := p.must_expect([]token_kind{identifier, assignment})
 
 	var value *Expression
@@ -348,21 +344,21 @@ func (p *parser_s) parse_declaration_statement() DeclarationStatement {
 	case assignment:
 		n := p.must_expect([]token_kind{identifier})
 		name = *p.create_ident(n)
-		p.skip_whitespace()
+		p.skip()
 	case identifier:
 		t := p.parse_type_literal()
 		typ = &t
-		p.skip_whitespace()
+		p.skip()
 
 		n := p.must_expect([]token_kind{identifier})
 		name = *p.create_ident(n)
-		p.skip_whitespace()
+		p.skip()
 	}
 
 	is_assigned := p.might_expect([]token_kind{assignment})
 
 	if is_assigned != nil {
-		p.skip_whitespace()
+		p.skip()
 		v := p.parse_expression()
 
 		if v != nil {
@@ -370,8 +366,7 @@ func (p *parser_s) parse_declaration_statement() DeclarationStatement {
 		}
 	}
 
-	p.skip_comment()
-	p.skip_whitespace()
+	p.skip()
 	var kind var_kind
 
 	if kind_n.Literal == "var" {
@@ -394,9 +389,9 @@ func (p *parser_s) parse_assignment_statement() AssignmentStatement {
 	defer p.catch()
 
 	lhs := p.parse_expression()
-	p.skip_whitespace()
+	p.skip()
 	operator := p.must_expect([]token_kind{assignment, arithmetic_assignment})
-	p.skip_whitespace()
+	p.skip()
 	rhs := p.parse_expression()
 
 	return AssignmentStatement{
@@ -465,23 +460,23 @@ func (p *parser_s) parse_bipartite_loop_predicate() LoopPredicate {
 		result.Key = nil
 	}
 
-	p.skip_whitespace()
+	p.skip()
 	token = p.might_expect([]token_kind{identifier, of_keyword})
 
 	switch token.Kind {
 	case identifier:
 		result.Value = p.create_ident(*token)
-		p.skip_whitespace()
+		p.skip()
 		p.must_expect([]token_kind{of_keyword})
-		p.skip_whitespace()
+		p.skip()
 	case of_keyword:
 		p.must_expect([]token_kind{whitespace, new_line})
-		p.skip_whitespace()
+		p.skip()
 	default:
-		p.skip_whitespace()
+		p.skip()
 		result.Value = nil
 		p.must_expect([]token_kind{of_keyword})
-		p.skip_whitespace()
+		p.skip()
 	}
 
 	iterator := p.parse_expression()
@@ -507,7 +502,7 @@ func (p *parser_s) parse_tripartite_loop_predicate() TripartiteLoopPredicate {
 		result.Declaration = &decl
 	}
 
-	p.skip_whitespace()
+	p.skip()
 	p.must_expect([]token_kind{semicolon})
 	predicate := p.parse_expression()
 
@@ -516,7 +511,7 @@ func (p *parser_s) parse_tripartite_loop_predicate() TripartiteLoopPredicate {
 	}
 	result.Predicate = predicate
 	p.must_expect([]token_kind{semicolon})
-	p.skip_whitespace()
+	p.skip()
 
 	procedure := p.parse_expression()
 
@@ -536,12 +531,12 @@ func (p *parser_s) parse_loop_statement() LoopStatement {
 	}
 
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	p.must_expect([]token_kind{left_parens})
-	p.skip_whitespace()
+	p.skip()
 	result.Predicate = p.parse_loop_predicate()
 	p.must_expect([]token_kind{right_parens})
-	p.skip_whitespace()
+	p.skip()
 	last := p.body_context
 	p.body_context = loop_context
 	result.Body = p.parse_block()
@@ -564,7 +559,7 @@ func (p *parser_s) parse_comment() Comment {
 	}
 
 	p.advance()
-	p.skip_whitespace()
+	p.skip()
 
 	return result
 }
@@ -581,10 +576,10 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 		result = p.parse_anonymous_fun_signature()
 	case left_parens:
 		p.advance()
-		p.skip_whitespace()
+		p.skip()
 		typ := p.parse_type_literal()
 		p.must_expect([]token_kind{right_parens})
-		p.skip_whitespace()
+		p.skip()
 		result = GroupType{Type: typ}
 	default:
 		result = p.parse_type_identifier()
@@ -594,9 +589,9 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 
 	if is_typed_literal != nil {
 		if reflect.TypeOf(result) == reflect.TypeOf(TypeIdentifier{}) {
-			p.skip_whitespace()
+			p.skip()
 			value := p.parse_literal_expression()
-			p.skip_whitespace()
+			p.skip()
 			p.must_expect([]token_kind{right_parens})
 
 			result = TypedLiteral{
@@ -607,12 +602,12 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 			p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "use a struct literal to create a type literal"))
 		}
 	}
-	p.skip_whitespace()
+	p.skip()
 
 	is_operated := p.might_expect([]token_kind{pipe, ampersand})
 
 	if is_operated != nil {
-		p.skip_whitespace()
+		p.skip()
 		right_hand := p.parse_type_literal()
 		result = OperatedType{
 			LeftHandSide:  result,
@@ -648,7 +643,7 @@ func (p *parser_s) parse_value_type_pair() ValueTypePair {
 	defer p.catch()
 
 	key := p.must_expect([]token_kind{identifier})
-	p.skip_whitespace()
+	p.skip()
 	typ := p.parse_type_literal()
 
 	return ValueTypePair{
@@ -673,7 +668,7 @@ func (p *parser_s) parse_constrained_type() ConstrainedType {
 	var constraint *TypeLiteral
 
 	if is_spaced != nil {
-		p.skip_whitespace()
+		p.skip()
 
 		is_constrained := p.might_expect([]token_kind{identifier})
 
@@ -681,7 +676,7 @@ func (p *parser_s) parse_constrained_type() ConstrainedType {
 			p.backup()
 			c := p.parse_type_literal()
 			constraint = &c
-			p.skip_whitespace()
+			p.skip()
 		}
 	}
 
@@ -699,14 +694,14 @@ func (p *parser_s) parse_type_definition_statement() TypeDefinitionStatement {
 
 	if is_hidden != nil {
 		start = *is_hidden
-		p.skip_whitespace()
+		p.skip()
 		p.must_expect([]token_kind{type_keyword})
 	} else {
 		start = p.must_expect([]token_kind{type_keyword})
 	}
 
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	name := p.must_expect([]token_kind{identifier})
 
 	result := TypeDefinitionStatement{
@@ -725,16 +720,16 @@ func (p *parser_s) parse_type_definition_statement() TypeDefinitionStatement {
 		result.Generics = parse_seperated_list(p, p.parse_constrained_type, comma, left_angle_bracks, right_angle_bracks, false, false)
 	}
 
-	p.skip_whitespace()
+	p.skip()
 	is_implementing := p.might_expect([]token_kind{implements_keyword})
 
 	if is_implementing != nil {
-		p.skip_whitespace()
+		p.skip()
 		result.Implementations = parse_seperated_list(p, p.parse_type_identifier, comma, left_squre_bracks, right_squre_bracks, false, false)
 	}
 
 	result.Definition = p.parse_type_literal()
-	p.skip_whitespace()
+	p.skip()
 
 	return result
 }
@@ -745,7 +740,7 @@ func (p *parser_s) parse_typed_parameter() TypedParameter {
 	start := p.might_expect([]token_kind{variadic_marker})
 	name := p.must_expect([]token_kind{identifier})
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	typ := p.parse_type_literal()
 
 	var location common.Location
@@ -772,14 +767,14 @@ func (p *parser_s) parse_trait_definition_statement() TraitDefinitionStatement {
 
 	if is_hidden != nil {
 		start = *is_hidden
-		p.skip_whitespace()
+		p.skip()
 		p.must_expect([]token_kind{trait_keyword})
 	} else {
 		start = p.must_expect([]token_kind{trait_keyword})
 	}
 
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	name := p.must_expect([]token_kind{identifier})
 
 	result := TraitDefinitionStatement{
@@ -797,19 +792,19 @@ func (p *parser_s) parse_trait_definition_statement() TraitDefinitionStatement {
 		result.Generics = parse_seperated_list(p, p.parse_constrained_type, comma, left_angle_bracks, right_angle_bracks, false, false)
 	}
 
-	p.skip_whitespace()
+	p.skip()
 
 	is_mimicked := p.might_expect([]token_kind{mimics_keyword})
 
 	if is_mimicked != nil {
-		p.skip_whitespace()
+		p.skip()
 		result.Mimics = parse_seperated_list(p, p.parse_type_identifier, comma, left_squre_bracks, right_squre_bracks, false, false)
-		p.skip_whitespace()
+		p.skip()
 	}
 
 	result.Definition = parse_seperated_list(p, p.parse_unbound_fun_signature, semicolon, left_curly_bracks, right_curly_bracks, true, true)
 
-	p.skip_whitespace()
+	p.skip()
 
 	return result
 }
@@ -819,7 +814,7 @@ func (p *parser_s) parse_unbound_fun_signature() UnboundFunctionSignature {
 
 	start := p.must_expect([]token_kind{fun_keyword})
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	name := p.must_expect([]token_kind{identifier})
 
 	generics := []ConstrainedType{}
@@ -830,13 +825,13 @@ func (p *parser_s) parse_unbound_fun_signature() UnboundFunctionSignature {
 		generics = parse_seperated_list(p, p.parse_constrained_type, comma, left_angle_bracks, right_angle_bracks, false, false)
 	}
 
-	p.skip_whitespace()
+	p.skip()
 
 	params := parse_seperated_list(p, p.parse_typed_parameter, comma, left_parens, right_parens, true, false)
-	p.skip_whitespace()
+	p.skip()
 
 	var return_type *TypeLiteral
-	p.skip_whitespace()
+	p.skip()
 
 	return_type_t := p.might_expect([]token_kind{identifier, cardinal_literal, fun_keyword, left_parens})
 
@@ -846,7 +841,7 @@ func (p *parser_s) parse_unbound_fun_signature() UnboundFunctionSignature {
 		return_type = &return_type_p
 	}
 
-	p.skip_whitespace()
+	p.skip()
 
 	return UnboundFunctionSignature{
 		Name:       *p.create_ident(name),
@@ -870,13 +865,13 @@ func (p *parser_s) parse_anonymous_fun_signature() AnonymousFunctionSignature {
 		generics = parse_seperated_list(p, p.parse_constrained_type, comma, left_angle_bracks, right_angle_bracks, false, false)
 	}
 
-	p.skip_whitespace()
+	p.skip()
 
 	params := parse_seperated_list(p, p.parse_typed_parameter, comma, left_parens, right_parens, true, false)
-	p.skip_whitespace()
+	p.skip()
 
 	var return_type *TypeLiteral
-	p.skip_whitespace()
+	p.skip()
 	return_type_t := p.might_expect([]token_kind{identifier, cardinal_literal})
 
 	if return_type_t != nil {
@@ -885,7 +880,7 @@ func (p *parser_s) parse_anonymous_fun_signature() AnonymousFunctionSignature {
 		return_type = &return_type_p
 	}
 
-	p.skip_whitespace()
+	p.skip()
 
 	return AnonymousFunctionSignature{
 		Parameters: params,
@@ -900,13 +895,13 @@ func (p *parser_s) parse_bound_fun_signature() BoundFunctionSignature {
 
 	start := p.must_expect([]token_kind{fun_keyword})
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	p.must_expect([]token_kind{for_keyword})
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	for_typ := p.parse_type_identifier()
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	name := p.must_expect([]token_kind{identifier})
 
 	generics := []ConstrainedType{}
@@ -917,13 +912,13 @@ func (p *parser_s) parse_bound_fun_signature() BoundFunctionSignature {
 		generics = parse_seperated_list(p, p.parse_constrained_type, comma, left_angle_bracks, right_angle_bracks, false, false)
 	}
 
-	p.skip_whitespace()
+	p.skip()
 
 	params := parse_seperated_list(p, p.parse_typed_parameter, comma, left_parens, right_parens, true, false)
-	p.skip_whitespace()
+	p.skip()
 
 	var return_type *TypeLiteral
-	p.skip_whitespace()
+	p.skip()
 	return_type_t := p.might_expect([]token_kind{identifier, cardinal_literal, fun_keyword, left_parens})
 
 	if return_type_t != nil {
@@ -932,7 +927,7 @@ func (p *parser_s) parse_bound_fun_signature() BoundFunctionSignature {
 		return_type = &return_type_p
 	}
 
-	p.skip_whitespace()
+	p.skip()
 
 	return BoundFunctionSignature{
 		Name:       *p.create_ident(name),
@@ -949,11 +944,9 @@ func (p *parser_s) parse_block() StatementList {
 
 	p.must_expect([]token_kind{left_curly_bracks})
 	body := p.parse_inline_level_statements()
-	p.skip_comment()
-	p.skip_whitespace()
+	p.skip()
 	p.must_expect([]token_kind{right_curly_bracks})
-	p.skip_comment()
-	p.skip_whitespace()
+	p.skip()
 
 	return body
 }
@@ -964,14 +957,14 @@ func (p *parser_s) parse_fun_definition_statement() FunDefinitionStatement {
 	is_hidden := p.might_expect([]token_kind{hidden_keyword})
 
 	if is_hidden != nil {
-		p.skip_whitespace()
+		p.skip()
 		p.must_expect([]token_kind{fun_keyword})
 	} else {
 		p.must_expect([]token_kind{fun_keyword})
 	}
 
 	p.must_expect([]token_kind{whitespace, new_line})
-	spaces := p.skip_whitespace()
+	spaces := p.skip()
 
 	next := p.must_expect([]token_kind{identifier, for_keyword})
 	p.backup_by(spaces + 1 /*identifier of for keyword */ + 1 /* single whitespace that is expected */ + 1 /* the fun keyword */)
@@ -1002,7 +995,7 @@ func (p *parser_s) parse_fun_definition_statement() FunDefinitionStatement {
 		p.must_expect([]token_kind{})
 	}
 
-	p.skip_whitespace()
+	p.skip()
 
 	// if this is a bound fun definition, this keyword as an expression is allowed
 	if reflect.TypeOf(definition) == reflect.TypeOf(&BoundFunDefinitionStatement{}) {
@@ -1023,10 +1016,10 @@ func (p *parser_s) parse_return_statement() ReturnStatement {
 	start := p.must_expect([]token_kind{return_keyword})
 
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	expression := p.parse_expression()
 
-	p.skip_whitespace()
+	p.skip()
 
 	p.parse_inline_level_statements()
 
@@ -1042,10 +1035,10 @@ func (p *parser_s) parse_yield_statement() YieldStatement {
 	start := p.must_expect([]token_kind{yield_keyword})
 
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 	expression := p.parse_expression()
 
-	p.skip_whitespace()
+	p.skip()
 
 	p.parse_inline_level_statements()
 
@@ -1077,6 +1070,21 @@ func (p *parser_s) is_left_fun(expression Expression) bool {
 		return true
 	case reflect.TypeOf(GroupExpression{}):
 		return p.is_left_fun(expression.(GroupExpression).Expression)
+	}
+
+	return false
+}
+
+func (p *parser_s) is_left_call(expression Expression) bool {
+	if expression == nil {
+		return false
+	}
+
+	switch reflect.TypeOf(expression) {
+	case reflect.TypeOf(CallExpression{}):
+		return true
+	case reflect.TypeOf(GroupExpression{}):
+		return p.is_left_call(expression.(GroupExpression).Expression)
 	}
 
 	return false
@@ -1222,6 +1230,17 @@ func (p *parser_s) continue_expression() Expression {
 		return p.parse_not_expression()
 	case fun_keyword:
 		return p.parse_anonymous_fun_expression()
+	case giveup_keyword:
+		if p.current_expression() != nil {
+			p.must_expect([]token_kind{})
+		}
+		p.advance()
+		p.set_current_expression(GiveupExpression{})
+
+		result := p.current_expression()
+		p.pop_expression()
+
+		return result
 	case caret:
 		if p.current_expression() != nil {
 			p.must_expect([]token_kind{})
@@ -1248,7 +1267,7 @@ func (p *parser_s) continue_expression() Expression {
 			return p.parse_index_expression()
 		}
 	case whitespace:
-		p.skip_whitespace()
+		p.skip()
 
 		if p.is_left_unary_arithmetic(p.current_expression()) {
 			result := p.current_expression()
@@ -1291,7 +1310,7 @@ func (p *parser_s) parse_anonymous_fun_expression() Expression {
 		Signature: signature,
 		location:  signature.location,
 	}
-	p.skip_whitespace()
+	p.skip()
 	last := p.body_context
 	p.body_context = function_context
 	result.Body = p.parse_block()
@@ -1306,14 +1325,14 @@ func (p *parser_s) parse_group_expression() Expression {
 	defer p.catch()
 
 	p.must_expect([]token_kind{left_parens})
-	p.skip_whitespace()
+	p.skip()
 	expression := p.parse_expression()
 
 	if expression == nil {
 		p.must_expect([]token_kind{})
 	}
 
-	p.skip_whitespace()
+	p.skip()
 	p.must_expect([]token_kind{right_parens})
 
 	p.set_current_expression(GroupExpression{Expression: expression})
@@ -1374,10 +1393,15 @@ func (p *parser_s) parse_or_expression() Expression {
 		p.backup()
 	}
 
-	p.skip_whitespace()
+	if !p.is_left_call(p.current_expression()) {
+		// if current expression is not a function call throw
+		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "recover from a non-function expression"))
+	}
+
+	p.skip()
 	p.must_expect([]token_kind{or_keyword})
 	p.must_expect([]token_kind{whitespace, new_line})
-	p.skip_whitespace()
+	p.skip()
 
 	rhs := p.parse_expression()
 
@@ -1425,7 +1449,7 @@ func (p *parser_s) parse_arithmetic_expression() Expression {
 	}
 
 	operator := p.must_expect([]token_kind{plus, minus, star, forward_slash, percent})
-	p.skip_whitespace()
+	p.skip()
 
 	rhs := p.parse_expression()
 
@@ -1469,7 +1493,7 @@ func (p *parser_s) parse_binary_expression() Expression {
 	}
 
 	operator := p.must_expect([]token_kind{left_angle_bracks, right_angle_bracks, binary_operator})
-	skipped := p.skip_whitespace()
+	skipped := p.skip()
 
 	rhs := p.parse_expression()
 
@@ -1496,8 +1520,7 @@ func (p *parser_s) parse_not_expression() Expression {
 	}
 
 	start := p.must_expect([]token_kind{exclamation})
-	skipped := p.skip_comment()
-	skipped += p.skip_whitespace()
+	skipped := p.skip()
 
 	expr := p.parse_expression()
 
@@ -1523,7 +1546,7 @@ func (p *parser_s) parse_instanceof_expression() Expression {
 	}
 
 	p.must_expect([]token_kind{instanceof_keyword})
-	p.skip_whitespace()
+	p.skip()
 
 	rhs := p.parse_type_literal()
 
@@ -1561,8 +1584,7 @@ func (p *parser_s) parse_arithmetic_unary_expression() ArithmeticUnaryExpression
 		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "do this operation with a function call"))
 	}
 
-	p.skip_comment()
-	p.skip_whitespace()
+	p.skip()
 
 	return ArithmeticUnaryExpression{
 		Expression: expression,
@@ -1592,11 +1614,9 @@ func (p *parser_s) parse_type_cast_expression() Expression {
 
 func (p *parser_s) parse_key_value_entry() KeyValueEntry {
 	key := p.must_expect([]token_kind{identifier})
-	p.skip_whitespace()
-	p.skip_comment()
+	p.skip()
 	p.must_expect([]token_kind{colon})
-	p.skip_whitespace()
-	p.skip_comment()
+	p.skip()
 	value := p.parse_expression()
 
 	return KeyValueEntry{
@@ -1672,7 +1692,7 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 		p.advance()
 	}
 
-	p.skip_whitespace()
+	p.skip()
 	return result
 }
 
@@ -1687,7 +1707,7 @@ func (p *parser_s) parse_predicate_block() PredicateBlock {
 
 	p.must_expect([]token_kind{right_parens})
 
-	p.skip_whitespace()
+	p.skip()
 	last := p.body_context
 	p.body_context = predicate_body_context
 	body := p.parse_block()
@@ -1703,7 +1723,7 @@ func (p *parser_s) parse_match_expression() Expression {
 	defer p.catch()
 
 	start := p.must_expect([]token_kind{match_keyword})
-	p.skip_whitespace()
+	p.skip()
 	p.must_expect([]token_kind{left_parens})
 	against := p.parse_expression()
 
@@ -1712,9 +1732,9 @@ func (p *parser_s) parse_match_expression() Expression {
 	}
 
 	p.must_expect([]token_kind{right_parens})
-	p.skip_whitespace()
+	p.skip()
 	p.must_expect([]token_kind{left_curly_bracks})
-	p.skip_whitespace()
+	p.skip()
 	// in a match statement, . (Dot) keyword as an expression is allowed
 	p.is_match_context = true
 
@@ -1723,8 +1743,7 @@ func (p *parser_s) parse_match_expression() Expression {
 
 	current := p.current_token()
 	for current.Kind != right_curly_bracks && current.Kind != base_keyword {
-		p.skip_comment()
-		p.skip_whitespace()
+		p.skip()
 
 		if current.Kind == right_curly_bracks || current.Kind == base_keyword {
 			break
@@ -1741,12 +1760,12 @@ func (p *parser_s) parse_match_expression() Expression {
 	next := p.might_expect([]token_kind{base_keyword})
 
 	if next != nil {
-		p.skip_whitespace()
+		p.skip()
 		base_block = p.parse_block()
-		p.skip_whitespace()
+		p.skip()
 	}
 
-	p.skip_comment()
+	p.skip()
 	p.must_expect([]token_kind{right_curly_bracks})
 
 	p.set_current_expression(MatchExpression{

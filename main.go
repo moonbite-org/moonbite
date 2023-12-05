@@ -9,13 +9,7 @@ import (
 
 func main() {
 	input := []byte(`package main
-	fun main() {
-		index++ 
-		++index --index
-		2
-		2 + 2
-		2 + 2 * 3
-	}
+	const test = read_file or giveup
 	`)
 	ast, err := parser.Parse(input, "test.mb")
 
@@ -24,9 +18,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	f := ast.Definitions[0].(*parser.UnboundFunDefinitionStatement).Body
-	fmt.Println(f)
-	// m := f[0].(parser.ExpressionStatement).Expression.(parser.ArithmeticUnaryExpression)
-
-	// fmt.Println(m)
+	fmt.Printf("%+v\n", ast.Definitions[0])
 }
