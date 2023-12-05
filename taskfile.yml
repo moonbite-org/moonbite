@@ -5,10 +5,12 @@ tasks:
     cmds:
       - task test-parser
       - task test-formatter
+      - task test-vm
   coverage:
     cmds:
       - task coverage-parser
       - task coverage-formatter
+      - task coverage-vm
   coverage-parser:
     cmds:
       - go test -coverprofile=./coverage/parser.out -v ./parser/cmd
@@ -17,6 +19,14 @@ tasks:
   test-parser:
     cmds:
       - go test -v ./parser/cmd
+  coverage-vm:
+    cmds:
+      - go test -coverprofile=./coverage/vm.out -v ./vm/cmd
+      - go tool cover -o ./coverage/vm.html -html=./coverage/vm.out
+      - rm ./coverage/vm.out
+  test-vm:
+    cmds:
+      - go test -v ./vm/cmd
   coverage-formatter:
     cmds:
       - go test -coverprofile=./coverage/formatter.out -v ./formatter/cmd
@@ -27,11 +37,16 @@ tasks:
       - go test -v ./parser/cmd
   build:
     cmds:
+      - rm -rf dist
       - task build-parser
       - task build-formatter
+      - task build-vm
   build-parser:
     cmds:
       - cd parser && go build -ldflags "-s -w" -o ../dist/moonp && cd ..
+  build-vm:
+    cmds:
+      - cd vm && go build -ldflags "-s -w" -o ../dist/mb && cd ..
   build-formatter:
     cmds:
       - cd formatter && go build -ldflags "-s -w" -o ../dist/moonf && cd ..
