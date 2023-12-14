@@ -198,6 +198,7 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 		} else {
 			result = append(result, ExpressionStatement{
 				Expression: expression,
+				Kind_:      ExpressionStatementKind,
 				location:   expression.Location(),
 			})
 			result = append(result, p.parse_inline_level_statements()...)
@@ -220,6 +221,7 @@ func (p *parser_s) parse_package_statement() PackageStatement {
 
 	statement := PackageStatement{
 		Name:     *p.create_ident(ident),
+		Kind_:    PackageStatementKind,
 		location: location,
 	}
 	return statement
@@ -239,6 +241,7 @@ func (p *parser_s) parse_use_statement() UseStatement {
 
 	statement := UseStatement{
 		Resource: *p.create_ident(ident),
+		Kind_:    UseStatementKind,
 		location: location,
 	}
 
@@ -303,6 +306,7 @@ func (p *parser_s) parse_if_statement() IfStatement {
 		MainBlock:    main_block,
 		ElseIfBlocks: else_if_blocks,
 		ElseBlock:    else_block,
+		Kind_:        IfStatementKind,
 		location:     start.Location,
 	}
 }
@@ -377,6 +381,7 @@ func (p *parser_s) parse_declaration_statement() DeclarationStatement {
 		Type:     typ,
 		Value:    value,
 		Hidden:   is_hidden != nil,
+		Kind_:    DeclarationStatementKind,
 		location: start.Location,
 	}
 }
@@ -394,6 +399,7 @@ func (p *parser_s) parse_assignment_statement() AssignmentStatement {
 		LeftHandSide:  lhs,
 		RightHandSide: rhs,
 		Operator:      operator.Literal,
+		Kind_:         AssignmentStatementKind,
 		location:      lhs.Location(),
 	}
 }
@@ -523,6 +529,7 @@ func (p *parser_s) parse_loop_statement() LoopStatement {
 
 	start := p.must_expect([]token_kind{for_keyword})
 	result := LoopStatement{
+		Kind_:    LoopStatementKind,
 		location: start.Location,
 	}
 
@@ -549,9 +556,9 @@ func (p *parser_s) parse_comment() Comment {
 
 	switch current.Kind {
 	case single_line_comment:
-		result = SingleLineCommentStatement{Comment: current.Literal, location: current.Location}
+		result = SingleLineCommentStatement{Comment: current.Literal, location: current.Location, Kind_: SingleLineCommentStatementKind}
 	case multi_line_comment:
-		result = MultiLineCommentStatement{Comment: current.Literal, location: current.Location}
+		result = MultiLineCommentStatement{Comment: current.Literal, location: current.Location, Kind_: MultiLineCommentStatementKind}
 	}
 
 	p.advance()
@@ -706,6 +713,7 @@ func (p *parser_s) parse_type_definition_statement() TypeDefinitionStatement {
 		Implementations: []TypeIdentifier{},
 		Definition:      TypeIdentifier{},
 		Hidden:          is_hidden != nil,
+		Kind_:           TypeDefinitionStatementKind,
 		location:        start.Location,
 	}
 
@@ -779,6 +787,7 @@ func (p *parser_s) parse_trait_definition_statement() TraitDefinitionStatement {
 		Generics: []ConstrainedType{},
 		Mimics:   []TypeIdentifier{},
 		Hidden:   is_hidden != nil,
+		Kind_:    TraitDefinitionStatementKind,
 		location: start.Location,
 	}
 
@@ -976,6 +985,7 @@ func (p *parser_s) parse_fun_definition_statement() FunDefinitionStatement {
 			Signature: signature,
 			Body:      []Statement{},
 			Hidden:    is_hidden != nil,
+			Kind_:     UnboundFunDefinitionStatementKind,
 			location:  signature.location,
 		}
 	case for_keyword:
@@ -985,6 +995,7 @@ func (p *parser_s) parse_fun_definition_statement() FunDefinitionStatement {
 			Signature: signature,
 			Body:      []Statement{},
 			Hidden:    is_hidden != nil,
+			Kind_:     BoundFunDefinitionStatementKind,
 			location:  signature.location,
 		}
 	default:
@@ -1022,6 +1033,7 @@ func (p *parser_s) parse_return_statement() ReturnStatement {
 
 	return ReturnStatement{
 		Value:    &expression,
+		Kind_:    ReturnStatementKind,
 		location: start.Location,
 	}
 }
@@ -1040,6 +1052,7 @@ func (p *parser_s) parse_yield_statement() YieldStatement {
 	p.parse_inline_level_statements()
 
 	return YieldStatement{
+		Kind_:    YieldStatementKind,
 		Value:    &expression,
 		location: start.Location,
 	}
@@ -1051,9 +1064,9 @@ func (p *parser_s) parse_flow_control_statement() Statement {
 	token := p.must_expect([]token_kind{continue_keyword, break_keyword})
 
 	if token.Kind == continue_keyword {
-		return ContinueStatement{}
+		return ContinueStatement{location: p.current_token().Location, Kind_: ContinueStatementKind}
 	} else {
-		return BreakStatement{}
+		return BreakStatement{location: p.current_token().Location, Kind_: BreakStatementKind}
 	}
 }
 
@@ -1158,7 +1171,7 @@ func (p *parser_s) continue_expression() Expression {
 			defer p.advance()
 			p.must_expect([]token_kind{})
 		}
-		p.set_current_expression(ThisExpression{location: p.current_token().Location})
+		p.set_current_expression(ThisExpression{location: p.current_token().Location, Kind_: ThisExpressionKind})
 		p.advance()
 		return p.continue_expression()
 	case dot:
@@ -1178,7 +1191,7 @@ func (p *parser_s) continue_expression() Expression {
 				p.must_expect([]token_kind{})
 			}
 			p.backup()
-			p.set_current_expression(MatchSelfExpression{location: p.current_token().Location})
+			p.set_current_expression(MatchSelfExpression{location: p.current_token().Location, Kind_: MatchSelfExpressionKind})
 			p.advance()
 			return p.continue_expression()
 		}
@@ -1236,7 +1249,7 @@ func (p *parser_s) continue_expression() Expression {
 			p.must_expect([]token_kind{})
 		}
 		p.advance()
-		p.set_current_expression(GiveupExpression{})
+		p.set_current_expression(GiveupExpression{location: p.current_token().Location, Kind_: GiveupExpressionKind})
 
 		result := p.current_expression()
 		p.pop_expression()
@@ -1247,7 +1260,7 @@ func (p *parser_s) continue_expression() Expression {
 			p.must_expect([]token_kind{})
 		}
 		p.advance()
-		p.set_current_expression(CaretExpression{})
+		p.set_current_expression(CaretExpression{location: p.current_token().Location, Kind_: CaretExpressionKind})
 		return p.continue_expression()
 	case or_keyword:
 		return p.parse_or_expression()
@@ -1309,6 +1322,7 @@ func (p *parser_s) parse_anonymous_fun_expression() Expression {
 	signature := p.parse_anonymous_fun_signature()
 	result := AnonymousFunExpression{
 		Signature: signature,
+		Kind_:     AnonymousFunExpressionKind,
 		location:  signature.location,
 	}
 	p.skip()
@@ -1325,7 +1339,7 @@ func (p *parser_s) parse_anonymous_fun_expression() Expression {
 func (p *parser_s) parse_group_expression() Expression {
 	defer p.catch()
 
-	p.must_expect([]token_kind{left_parens})
+	start := p.must_expect([]token_kind{left_parens})
 	p.skip()
 	expression := p.parse_expression()
 
@@ -1336,7 +1350,7 @@ func (p *parser_s) parse_group_expression() Expression {
 	p.skip()
 	p.must_expect([]token_kind{right_parens})
 
-	p.set_current_expression(GroupExpression{Expression: expression})
+	p.set_current_expression(GroupExpression{Expression: expression, location: start.Location, Kind_: GroupExpressionKind})
 
 	return p.continue_expression()
 }
@@ -1353,6 +1367,8 @@ func (p *parser_s) parse_call_expression() Expression {
 	p.set_current_expression(CallExpression{
 		Callee:    p.current_expression(),
 		Arguments: args,
+		Kind_:     CallExpressionKind,
+		location:  p.current_token().Location,
 	})
 
 	return p.continue_expression()
@@ -1364,7 +1380,7 @@ func (p *parser_s) parse_member_expression() Expression {
 	if p.current_expression() == nil {
 		// If there is no left hand side, it could just be a match self expression
 		if p.is_match_context {
-			p.set_current_expression(MatchSelfExpression{})
+			p.set_current_expression(MatchSelfExpression{location: p.current_token().Location, Kind_: MatchSelfExpressionKind})
 		} else {
 			p.backup()
 		}
@@ -1380,6 +1396,7 @@ func (p *parser_s) parse_member_expression() Expression {
 	p.set_current_expression(MemberExpression{
 		LeftHandSide:  p.current_expression(),
 		RightHandSide: *rhs,
+		Kind_:         MemberExpressionKind,
 		location:      p.current_expression().Location(),
 	})
 
@@ -1409,6 +1426,7 @@ func (p *parser_s) parse_or_expression() Expression {
 	p.set_current_expression(OrExpression{
 		LeftHandSide:  p.current_expression(),
 		RightHandSide: rhs,
+		Kind_:         OrExpressionKind,
 		location:      p.current_expression().Location(),
 	})
 
@@ -1434,8 +1452,10 @@ func (p *parser_s) parse_index_expression() Expression {
 	p.must_expect([]token_kind{right_squre_bracks})
 
 	p.set_current_expression(IndexExpression{
-		Host:  p.current_expression(),
-		Index: index,
+		Host:     p.current_expression(),
+		Index:    index,
+		Kind_:    IndexExpressionKind,
+		location: p.current_expression().Location(),
 	})
 
 	return p.continue_expression()
@@ -1458,6 +1478,8 @@ func (p *parser_s) parse_arithmetic_expression() Expression {
 		LeftHandSide:  current,
 		RightHandSide: rhs,
 		Operator:      operator.Literal,
+		Kind_:         ArithmeticExpressionKind,
+		location:      current.Location(),
 	}
 
 	if operator.Kind == plus || operator.Kind == minus {
@@ -1477,9 +1499,13 @@ func (p *parser_s) parse_arithmetic_expression() Expression {
 			LeftHandSide:  current,
 			RightHandSide: rhs_e.LeftHandSide,
 			Operator:      operator.Literal,
+			Kind_:         ArithmeticExpressionKind,
+			location:      current.Location(),
 		},
 		RightHandSide: rhs_e.RightHandSide,
 		Operator:      rhs_e.Operator,
+		Kind_:         ArithmeticExpressionKind,
+		location:      current.Location(),
 	})
 
 	return p.continue_expression()
@@ -1507,6 +1533,8 @@ func (p *parser_s) parse_binary_expression() Expression {
 		LeftHandSide:  current,
 		RightHandSide: rhs,
 		Operator:      operator.Literal,
+		Kind_:         BinaryExpressionKind,
+		location:      current.Location(),
 	})
 
 	return p.continue_expression()
@@ -1532,6 +1560,7 @@ func (p *parser_s) parse_not_expression() Expression {
 
 	p.set_current_expression(NotExpression{
 		Expression: expr,
+		Kind_:      NotExpressionKind,
 		location:   start.Location,
 	})
 
@@ -1554,6 +1583,7 @@ func (p *parser_s) parse_instanceof_expression() Expression {
 	p.set_current_expression(InstanceofExpression{
 		LeftHandSide:  current,
 		RightHandSide: rhs,
+		Kind_:         InstanceofExpressionKind,
 		location:      current.Location(),
 	})
 
@@ -1591,6 +1621,8 @@ func (p *parser_s) parse_arithmetic_unary_expression() ArithmeticUnaryExpression
 		Expression: expression,
 		Operation:  kind,
 		Pre:        false,
+		Kind_:      ArithmeticUnaryExpressionKind,
+		location:   expression.Location(),
 	}
 }
 
@@ -1606,8 +1638,10 @@ func (p *parser_s) parse_type_cast_expression() Expression {
 	p.must_expect([]token_kind{right_parens})
 
 	p.set_current_expression(TypeCastExpression{
-		Value: p.current_expression(),
-		Type:  typ,
+		Value:    p.current_expression(),
+		Type:     typ,
+		Kind_:    TypeCastExpressionKind,
+		location: p.continue_expression().Location(),
 	})
 
 	return p.continue_expression()
@@ -1636,24 +1670,28 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 	case string_literal:
 		result = StringLiteralExpression{
 			Value:    current.Literal,
+			Kind_:    StringLiteralExpressionKind,
 			location: current.Location,
 		}
 		p.advance()
 	case rune_literal:
 		result = RuneLiteralExpression{
 			Value:    rune(current.Literal[0]),
+			Kind_:    RuneLiteralExpressionKind,
 			location: current.Location,
 		}
 		p.advance()
 	case bool_literal:
 		result = BoolLiteralExpression{
 			Value:    current.Literal == "true",
+			Kind_:    BoolLiteralExpressionKind,
 			location: current.Location,
 		}
 		p.advance()
 	case number_literal:
 		result = NumberLiteralExpression{
 			Value:    create_number_literal(*p, current.Literal),
+			Kind_:    NumberLiteralExpressionKind,
 			location: current.Location,
 		}
 		p.advance()
@@ -1671,6 +1709,7 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 
 		result = ListLiteralExpression{
 			Value:    entries,
+			Kind_:    ListLiteralExpressionKind,
 			location: current.Location,
 		}
 	case left_curly_bracks:
@@ -1683,11 +1722,13 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 		result = InstanceLiteralExpression{
 			Type:     typ,
 			Value:    entries,
+			Kind_:    InstanceLiteralExpressionKind,
 			location: typ.Name.Location(),
 		}
 	default:
 		result = StringLiteralExpression{
 			Value:    current.Literal,
+			Kind_:    StringLiteralExpressionKind,
 			location: current.Location,
 		}
 		p.advance()
@@ -1773,6 +1814,7 @@ func (p *parser_s) parse_match_expression() Expression {
 		Against:   against,
 		Blocks:    blocks,
 		BaseBlock: base_block,
+		Kind_:     MatchExpressionKind,
 		location:  start.Location,
 	})
 	p.is_match_context = false

@@ -26,9 +26,9 @@ func assert_error(t *testing.T, err common.Error) {
 	}
 }
 
-func assert_string(t *testing.T, given, expexted string) {
-	if given != expexted {
-		t.Errorf("expected string to be %s but got %s", expexted, given)
+func assert_string(t *testing.T, given, expected string) {
+	if given != expected {
+		t.Errorf("expected string to be %s but got %s", expected, given)
 	}
 }
 
@@ -38,9 +38,9 @@ func assert_bool(t *testing.T, given, expexted bool) {
 	}
 }
 
-func assert_int(t *testing.T, given, expexted int) {
-	if given != expexted {
-		t.Errorf("expected int to be %d but got %d", expexted, given)
+func assert_int(t *testing.T, given, expected int) {
+	if given != expected {
+		t.Errorf("expected int to be %d but got %d", expected, given)
 	}
 }
 
@@ -688,6 +688,16 @@ func TestBinaryExpression(t *testing.T) {
 	ast, err = parser.Parse(input, "test.mb")
 
 	assert_error(t, err)
+
+	input = []byte("package main const test = 2 && false")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte("package main const test = false || []")
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
 }
 
 func TestCallExpression(t *testing.T) {

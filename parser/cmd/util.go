@@ -204,7 +204,7 @@ func parse_seperated_list[T any](p *parser_s, parser_func func() T, seperator to
 }
 
 func (p *parser_s) create_ident(token Token) *IdentifierExpression {
-	return &IdentifierExpression{Value: token.Literal, location: token.Location}
+	return &IdentifierExpression{Value: token.Literal, Kind_: IdentifierExpressionKind, location: token.Location}
 }
 
 func create_number_literal(p parser_s, literal string) NumberLiteral {
