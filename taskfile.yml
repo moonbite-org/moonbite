@@ -4,13 +4,15 @@ tasks:
   test:
     cmds:
       - task test-parser
-      - task test-formatter
+      - task test-typechecker
       # - task test-vm
+      # - task test-compiler
   coverage:
     cmds:
       - task coverage-parser
-      - task coverage-formatter
+      - task coverage-typechecker
       # - task coverage-vm
+      # - task coverage-compiler
   coverage-parser:
     cmds:
       - go test -coverprofile=./coverage/parser.out -v ./parser/cmd
@@ -27,25 +29,23 @@ tasks:
   test-vm:
     cmds:
       - go test -v ./vm/cmd
-  coverage-formatter:
+  coverage-typechecker:
     cmds:
-      - go test -coverprofile=./coverage/formatter.out -v ./formatter/cmd
-      - go tool cover -o ./coverage/formatter.html -html=./coverage/formatter.out
-      - rm ./coverage/formatter.out
-  test-formatter:
+      - go test -coverprofile=./coverage/typechecker.out -v ./typechecker
+      - go tool cover -o ./coverage/typechecker.html -html=./coverage/typechecker.out
+      - rm ./coverage/typechecker.out
+  test-typechecker:
     cmds:
-      - go test -v ./parser/cmd
+      - go test -v ./typechecker
   build-prod:
     cmds:
       - rm -rf dist
       - task build-parser-prod
-      - task build-formatter-prod
       # - task build-vm-prod
       - task zip
   build:
     cmds:
       - task build-parser
-      - task build-formatter
       # - task build-vm
   build-parser-prod:
     cmds:
@@ -71,18 +71,6 @@ tasks:
   build-vm:
     cmds:
       - cd vm && go build -ldflags "-s -w" -o ../dist/mb && cd ..
-  build-formatter-prod:
-    cmds:
-      - cd formatter && GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ../dist/moonf_osx_arm64 && cd ..
-      - cd formatter && GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/moonf_osx_amd64 && cd ..
-      - cd formatter && GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o ../dist/moonf_linux_arm64.elf && cd ..
-      - cd formatter && GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/moonf_linux_amd64.elf && cd ..
-      - cd formatter && GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/moonf_win.exe && cd ..
-      - cd formatter && GOOS=js GOARCH=wasm go build -o ../dist/moonf_js.wasm && cd ..
-      - cd formatter && GOOS=wasip1 GOARCH=wasm go build -o ../dist/moonf_wasi.wasm && cd ..
-  build-formatter:
-    cmds:
-      - cd formatter && go build -ldflags "-s -w" -o ../dist/moonf && cd ..
   zip:
     cmds:
       - for file in ./dist/*; do zip $file.zip $file && rm $file; done
