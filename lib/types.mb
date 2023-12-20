@@ -1,0 +1,113 @@
+package types
+// internal type for the compiler
+
+use "strconv"
+
+trait Iterable<T> {
+  fun next() T;
+  fun done() bool;
+}
+
+trait Printable {
+  fun string() string;
+}
+
+type Uint8 implements [Printable] uint8
+fun for Uint8 string() String {
+  return strconv.itoa(this) or giveup
+}
+
+type Uint16 implements [Printable] uint16
+fun for Uint16 string() String {
+  return strconv.itoa(this) or giveup
+}
+
+type Uint32 implements [Printable] uint32
+fun for Uint32 string() String {
+  return strconv.itoa(this) or giveup
+}
+
+type Uint64 implements [Printable] uint64
+fun for Uint64 string() String {
+  return strconv.itoa(this) or giveup
+}
+
+
+type Int8 implements [Printable] int8
+fun for Int8 string() String {
+  return strconv.itoa(this) or giveup
+}
+
+type Int16 implements [Printable] int16
+fun for Int16 string() String {
+  return strconv.itoa(this) or giveup
+}
+
+type Int32 implements [Printable] int32
+fun for Int32 string() String {
+  return strconv.itoa(this) or giveup
+}
+
+type Int64 implements [Printable] int64
+fun for Int64 string() String {
+  return strconv.itoa(this) or giveup
+}
+
+
+type List<T Printable> implements [Iterable<T>, Printable] iterable
+
+fun for List length() Uint32 {
+  var count = 0
+
+  for (!this.done()) {
+    count++
+    this.next()
+  }
+
+  return count
+}
+
+fun for List push(value T) {
+  this[this.length()] = value
+}
+
+fun for List last() T {
+  return this[this.length() - 1]
+}
+
+fun for List string() String {
+  var result = "["
+
+  for (,value of this) {
+    result += value.string()
+    result += ", "
+  }
+
+  result.slice(0, -2)
+  result += "]"
+
+  return result
+}
+
+type Rune Uint32
+
+type String implements [Printable] List<Rune>
+
+fun for String string() String {
+  var result = ""
+
+  for (,rune of this) {
+    result += rune.string()
+  }
+
+  return result
+}
+
+trait Observable<T> {
+  fun on_declared();
+  fun on_set(value T, key String | String("this"));
+  fun on_dependency_added(dependency Printable);
+  fun on_dependency_removed(dependency Printable); 
+  fun is_empty() bool;
+  fun tick();
+}
