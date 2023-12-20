@@ -21,3 +21,17 @@ func (table SymbolTable) GetByBase(base int) *Type {
 func (table *SymbolTable) Set(name string, typ *Type) {
 	table.Definitions[name] = typ
 }
+
+func (t SymbolTable) Merge(table *SymbolTable) SymbolTable {
+	new_table := SymbolTable{
+		Definitions: t.Definitions,
+	}
+
+	if table != nil {
+		for name, definition := range table.Definitions {
+			new_table.Definitions[name] = definition
+		}
+	}
+
+	return new_table
+}

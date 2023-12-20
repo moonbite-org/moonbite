@@ -56,20 +56,23 @@ func (p type_param_stack) GetArgument(index int) *Type {
 	return p[prefixer("param_", index)].typ
 }
 
-func (p type_param_stack) AddMethod(index int, param *Type) {
-	p[prefixer("method_", index)] = type_param{index: index + MethodOffset, typ: param}
+func (p type_param_stack) AddMethod(name string, index int, param *Type) {
+	method := fmt.Sprintf("method_%s", name)
+	p[prefixer(method)] = type_param{index: index + MethodOffset, typ: param}
 }
 
-func (p type_param_stack) GetMethod(index int) *Type {
-	return p[prefixer("method_", index)].typ
+func (p type_param_stack) GetMethod(name string) *Type {
+	method := fmt.Sprintf("method_%s", name)
+	return p[prefixer(method)].typ
 }
 
-func (p type_param_stack) GetMethods(index int) map[string]*Type {
+func (p type_param_stack) GetMethods() map[string]*Type {
 	result := map[string]*Type{}
 
 	for name, property := range p {
 		if strings.HasPrefix(name, prefixer("method_")) {
-			result[name] = property.typ
+			unprefixed := strings.TrimPrefix(name, prefixer("method_"))
+			result[unprefixed] = property.typ
 		}
 	}
 
@@ -86,12 +89,13 @@ func (p type_param_stack) GetProperty(name string) *Type {
 	return p[prefixer(property)].typ
 }
 
-func (p type_param_stack) GetProperties(index int) map[string]*Type {
+func (p type_param_stack) GetProperties() map[string]*Type {
 	result := map[string]*Type{}
 
 	for name, property := range p {
 		if strings.HasPrefix(name, prefixer("property_")) {
-			result[name] = property.typ
+			unprefixed := strings.TrimPrefix(name, prefixer("property_"))
+			result[unprefixed] = property.typ
 		}
 	}
 

@@ -35,6 +35,7 @@ var builtin_primes = map[string]int{
 	"int32":    43,
 	"int64":    47,
 	"bool":     53,
+	"string":   59,
 }
 
 func (t *Type) extend_base() int {
@@ -50,8 +51,8 @@ func (t *Type) extend_base() int {
 	return new_base
 }
 
-func (t *Type) Extend(arguments []*Type, parameters type_param_stack) Type {
-	return NewType(t.extend_base(), parser.TypeIdentifierKind, arguments, parameters)
+func (t *Type) Extend(arguments []*Type, parameters type_param_stack, kind parser.TypeKind) Type {
+	return NewType(t.extend_base(), kind, arguments, parameters)
 }
 
 func (t *Type) SetMetaData(data common.Object) error {

@@ -25,7 +25,7 @@ func assert(t *testing.T, given, expected any) {
 }
 
 func TestComptimeBuiltins(t *testing.T) {
-	checker := typechecker.New()
+	checker := typechecker.New("/test.mb")
 	checker.SetComptimeBuiltins()
 
 	assert(t, checker.SymbolTable.GetByName("uint32"), checker.SymbolTable.GetByName("uint32"))
@@ -94,11 +94,11 @@ func TestComptimeBuiltins(t *testing.T) {
 }
 
 func Test(t *testing.T) {
-	checker := typechecker.New()
+	checker := typechecker.New("/test.mb")
 	checker.SetComptimeBuiltins()
 	checker.SetRuntimeBuiltins()
 
-	fmt.Println(checker.DefineType(parse_type_def("Foo<T, K>", "List<K>")))
+	fmt.Println(checker.File)
 
 	// fmt.Println(checker.ResolveTypeLiteral(parser.StructLiteral{
 	// 	Values: []parser.ValueTypePair{
