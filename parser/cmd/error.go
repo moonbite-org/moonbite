@@ -6,7 +6,7 @@ type ErrorKind int
 
 const (
 	SyntaxError ErrorKind = iota
-	TypeMismatchError
+	TypeError
 	FileError
 	CompileError
 )
@@ -21,9 +21,10 @@ var ErrorMessages = map[string]string{
 }
 
 var ErrorKindMap = map[ErrorKind]string{
-	FileError:         "File Error",
-	SyntaxError:       "Syntax Error",
-	TypeMismatchError: "Type Mismatch Error",
+	FileError:    "File Error",
+	SyntaxError:  "Syntax Error",
+	TypeError:    "Type Error",
+	CompileError: "Compile Error",
 }
 
 type Location struct {
@@ -59,4 +60,25 @@ func CreateAnonError(kind ErrorKind, reason string) Error {
 		},
 		Exists: true,
 	}
+}
+
+func CreateTypeError(reason string, location Location) Error {
+	return Error{
+		Location: location,
+		Kind:     TypeError,
+		Exists:   true,
+		Reason:   reason,
+	}
+}
+
+var EmptyError = Error{
+	Kind:   0,
+	Reason: "",
+	Location: Location{
+		Line:   0,
+		Column: 0,
+		Offset: 0,
+		File:   "",
+	},
+	Exists: false,
 }

@@ -99,9 +99,11 @@ type ConstrainedType struct {
 	Name       IdentifierExpression `json:"name"`
 	Index      int                  `json:"index"`
 	Constraint *TypeLiteral         `json:"constraint"`
+	Location   Location             `json:"location"`
 }
 
 type TypeLiteral interface {
+	Location() Location
 	TypeKind() TypeKind
 }
 
@@ -109,29 +111,44 @@ type TypedLiteral struct {
 	TypeKind_ TypeKind          `json:"type_kind"`
 	Type      TypeIdentifier    `json:"type"`
 	Literal   LiteralExpression `json:"literal"`
+	location  Location
 }
 
 func (t TypedLiteral) TypeKind() TypeKind {
 	return TypedLiteralKind
 }
 
+func (t TypedLiteral) Location() Location {
+	return t.location
+}
+
 type GroupType struct {
 	TypeKind_ TypeKind    `json:"type_kind"`
 	Type      TypeLiteral `json:"type"`
+	location  Location
 }
 
 func (t GroupType) TypeKind() TypeKind {
 	return GroupTypeKind
 }
 
+func (t GroupType) Location() Location {
+	return t.location
+}
+
 type TypeIdentifier struct {
 	TypeKind_ TypeKind            `json:"type_kind"`
 	Name      Expression          `json:"name"`
 	Generics  map[int]TypeLiteral `json:"generics"`
+	location  Location
 }
 
 func (t TypeIdentifier) TypeKind() TypeKind {
 	return TypeIdentifierKind
+}
+
+func (t TypeIdentifier) Location() Location {
+	return t.location
 }
 
 type OperatedType struct {
@@ -139,24 +156,35 @@ type OperatedType struct {
 	LeftHandSide  TypeLiteral `json:"left_hand_side"`
 	RightHandSide TypeLiteral `json:"right_hand_side"`
 	Operator      string
+	location      Location
 }
 
 func (t OperatedType) TypeKind() TypeKind {
 	return OperatedTypeKind
 }
 
+func (t OperatedType) Location() Location {
+	return t.location
+}
+
 type ValueTypePair struct {
-	Key  IdentifierExpression `json:"key"`
-	Type TypeLiteral          `json:"type"`
+	Key      IdentifierExpression `json:"key"`
+	Type     TypeLiteral          `json:"type"`
+	Location Location             `json:"location"`
 }
 
 type StructLiteral struct {
 	TypeKind_ TypeKind `json:"type_kind"`
 	Values    []ValueTypePair
+	location  Location
 }
 
 func (t StructLiteral) TypeKind() TypeKind {
 	return StructLiteralKind
+}
+
+func (t StructLiteral) Location() Location {
+	return t.location
 }
 
 type TypedParameter struct {
@@ -179,6 +207,10 @@ type AnonymousFunctionSignature struct {
 	Generics   []ConstrainedType `json:"generics"`
 	ReturnType *TypeLiteral      `json:"return_type"`
 	location   Location
+}
+
+func (s AnonymousFunctionSignature) Location() Location {
+	return s.location
 }
 
 func (s AnonymousFunctionSignature) SignatureKind() SignatureKind {
@@ -210,6 +242,10 @@ type UnboundFunctionSignature struct {
 	location   Location
 }
 
+func (s UnboundFunctionSignature) Location() Location {
+	return s.location
+}
+
 func (s UnboundFunctionSignature) SignatureKind() SignatureKind {
 	return UnboundFunctionSignatureKind
 }
@@ -237,6 +273,10 @@ type BoundFunctionSignature struct {
 	Parameters []TypedParameter     `json:"parameters"`
 	ReturnType *TypeLiteral         `json:"return_type"`
 	location   Location
+}
+
+func (s BoundFunctionSignature) Location() Location {
+	return s.location
 }
 
 func (s BoundFunctionSignature) SignatureKind() SignatureKind {

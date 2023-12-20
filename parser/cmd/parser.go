@@ -571,6 +571,7 @@ func (p *parser_s) parse_comment() Comment {
 func (p *parser_s) parse_type_literal() TypeLiteral {
 	defer p.catch()
 
+	start := p.current_token().Location
 	var result TypeLiteral
 
 	switch p.current_token().Kind {
@@ -584,7 +585,7 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 		typ := p.parse_type_literal()
 		p.must_expect([]token_kind{right_parens})
 		p.skip()
-		result = GroupType{Type: typ, TypeKind_: GroupTypeKind}
+		result = GroupType{Type: typ, TypeKind_: GroupTypeKind, location: start}
 	default:
 		result = p.parse_type_identifier()
 	}
@@ -602,6 +603,7 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 				TypeKind_: TypedLiteralKind,
 				Type:      result.(TypeIdentifier),
 				Literal:   value,
+				location:  start,
 			}
 		} else {
 			p.throw(fmt.Sprintf(ErrorMessages["i_con"], "use a struct literal to create a type literal"))
@@ -619,6 +621,7 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 			LeftHandSide:  result,
 			RightHandSide: right_hand,
 			Operator:      is_operated.Literal,
+			location:      result.Location(),
 		}
 	}
 
@@ -634,6 +637,7 @@ func (p *parser_s) parse_type_identifier() TypeIdentifier {
 		TypeKind_: TypeIdentifierKind,
 		Name:      *p.create_ident(name),
 		Generics:  map[int]TypeLiteral{},
+		location:  name.Location,
 	}
 
 	is_generic := p.might_expect([]token_kind{left_angle_bracks})
@@ -658,19 +662,22 @@ func (p *parser_s) parse_value_type_pair() ValueTypePair {
 	typ := p.parse_type_literal()
 
 	return ValueTypePair{
-		Key:  *p.create_ident(key),
-		Type: typ,
+		Key:      *p.create_ident(key),
+		Type:     typ,
+		Location: key.Location,
 	}
 }
 
 func (p *parser_s) parse_struct_literal() StructLiteral {
 	defer p.catch()
 
+	location := p.current_token().Location
 	values := parse_seperated_list(p, p.parse_value_type_pair, semicolon, left_curly_bracks, right_curly_bracks, true, true)
 
 	return StructLiteral{
 		TypeKind_: StructLiteralKind,
 		Values:    values,
+		location:  location,
 	}
 }
 
@@ -697,6 +704,7 @@ func (p *parser_s) parse_constrained_type() ConstrainedType {
 	return ConstrainedType{
 		Name:       *p.create_ident(name),
 		Constraint: constraint,
+		Location:   name.Location,
 	}
 }
 
