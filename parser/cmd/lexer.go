@@ -5,16 +5,14 @@ import (
 	"slices"
 	"strings"
 	"unicode"
-
-	common "github.com/moonbite-org/moonbite/parser/common"
 )
 
 type lexer struct {
 	input    []rune
 	offset   int
 	tokens   []Token
-	location common.Location
-	error    common.Error
+	location Location
+	error    Error
 }
 
 var keywords = map[string]token_kind{
@@ -48,11 +46,11 @@ var keywords = map[string]token_kind{
 }
 
 var bool_literals = []string{"true", "false"}
-var cardinal_literals = []string{"string", "bool", "rune", "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "float32", "float64"}
+var cardinal_literals = []string{"bool", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "float64"}
 
 func (l *lexer) throw(reason string) {
-	l.error = common.Error{
-		Kind:     common.SyntaxError,
+	l.error = Error{
+		Kind:     SyntaxError,
 		Reason:   reason,
 		Location: l.location,
 		Exists:   true,
@@ -152,10 +150,10 @@ func (l *lexer) register_token(token Token) {
 	l.advance_by(len(token.Raw))
 }
 
-func lex(input []byte, filename string) ([]Token, common.Error) {
+func lex(input []byte, filename string) ([]Token, Error) {
 	lexer := lexer{
 		input: []rune(string(input)),
-		location: common.Location{
+		location: Location{
 			Line:   1,
 			Column: 1,
 			Offset: 0,
@@ -193,7 +191,7 @@ func lex(input []byte, filename string) ([]Token, common.Error) {
 		current = lexer.current_rune()
 	}
 
-	return lexer.tokens, common.Error{}
+	return lexer.tokens, Error{}
 }
 
 func (l *lexer) lex_whitespace() {
@@ -232,7 +230,7 @@ func (l *lexer) lex_string_literal() {
 	}
 
 	if l.next_rune() == eof || l.next_rune() == '\n' || l.next_rune() == '\r' {
-		l.throw(fmt.Sprintf(common.ErrorMessages["u_eof"], "a '\"' (double quote) to close the string literal"))
+		l.throw(fmt.Sprintf(ErrorMessages["u_eof"], "a '\"' (double quote) to close the string literal"))
 	} else {
 		l.backup_by(length - 1)
 		l.register_token(l.create_token(string_literal, length))
@@ -253,7 +251,7 @@ func (l *lexer) lex_multi_line_string_literal() {
 	}
 
 	if l.next_rune() == eof {
-		l.throw(fmt.Sprintf(common.ErrorMessages["u_eof"], "a '`' (back quote) to close the multiline string literal"))
+		l.throw(fmt.Sprintf(ErrorMessages["u_eof"], "a '`' (back quote) to close the multiline string literal"))
 	} else {
 		l.backup_by(length - 1)
 		l.register_token(l.create_token(string_literal, length))
@@ -274,14 +272,14 @@ func (l *lexer) lex_rune_literal() {
 	}
 
 	if l.next_rune() == eof || l.next_rune() == '\n' || l.next_rune() == '\r' {
-		l.throw(fmt.Sprintf(common.ErrorMessages["u_eof"], "a \"'\" (single quote) to close the rune literal"))
+		l.throw(fmt.Sprintf(ErrorMessages["u_eof"], "a \"'\" (single quote) to close the rune literal"))
 	} else {
 		if length == 1 {
 			l.backup_by(length - 1)
 			l.register_token(l.create_token(rune_literal, length))
 			l.advance()
 		} else {
-			l.throw(fmt.Sprintf(common.ErrorMessages["i_val"], "Rune literals must exactly be 1 character"))
+			l.throw(fmt.Sprintf(ErrorMessages["i_val"], "Rune literals must exactly be 1 character"))
 		}
 	}
 }

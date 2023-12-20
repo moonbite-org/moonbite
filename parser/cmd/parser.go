@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"path"
 	"reflect"
-
-	common "github.com/moonbite-org/moonbite/parser/common"
 )
 
 // extra allowed keywords inside code blocks
@@ -17,7 +15,7 @@ type parser_s struct {
 	input            []byte
 	offset           int
 	tokens           []Token
-	error            common.Error
+	error            Error
 	ast              Ast
 	expressions      []Expression
 	is_match_context bool
@@ -234,13 +232,16 @@ func (p *parser_s) parse_use_statement() UseStatement {
 	p.must_expect([]token_kind{use_keyword})
 	p.must_expect([]token_kind{whitespace, new_line})
 	p.skip()
-	ident := p.must_expect([]token_kind{identifier})
+	ident := p.must_expect([]token_kind{string_literal})
 	p.must_expect([]token_kind{whitespace, new_line, eof_token_kind})
 	p.skip()
 	as := p.might_expect([]token_kind{as_keyword})
 
 	statement := UseStatement{
-		Resource: *p.create_ident(ident),
+		Resource: StringLiteralExpression{
+			Value:    ident.Literal,
+			location: ident.Location,
+		},
 		Kind_:    UseStatementKind,
 		location: location,
 	}
@@ -367,7 +368,7 @@ func (p *parser_s) parse_declaration_statement() DeclarationStatement {
 	}
 
 	p.skip()
-	var kind var_kind
+	var kind VarKind
 
 	if kind_n.Literal == "var" {
 		kind = VariableKind
@@ -583,7 +584,7 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 		typ := p.parse_type_literal()
 		p.must_expect([]token_kind{right_parens})
 		p.skip()
-		result = GroupType{Type: typ}
+		result = GroupType{Type: typ, TypeKind_: GroupTypeKind}
 	default:
 		result = p.parse_type_identifier()
 	}
@@ -598,11 +599,12 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 			p.must_expect([]token_kind{right_parens})
 
 			result = TypedLiteral{
-				Type:    result.(TypeIdentifier),
-				Literal: value,
+				TypeKind_: TypedLiteralKind,
+				Type:      result.(TypeIdentifier),
+				Literal:   value,
 			}
 		} else {
-			p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "use a struct literal to create a type literal"))
+			p.throw(fmt.Sprintf(ErrorMessages["i_con"], "use a struct literal to create a type literal"))
 		}
 	}
 	p.skip()
@@ -613,6 +615,7 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 		p.skip()
 		right_hand := p.parse_type_literal()
 		result = OperatedType{
+			TypeKind_:     OperatedTypeKind,
 			LeftHandSide:  result,
 			RightHandSide: right_hand,
 			Operator:      is_operated.Literal,
@@ -628,15 +631,20 @@ func (p *parser_s) parse_type_identifier() TypeIdentifier {
 	name := p.must_expect([]token_kind{identifier, cardinal_literal})
 
 	result := TypeIdentifier{
-		Name:     p.create_ident(name),
-		Generics: []TypeLiteral{},
+		TypeKind_: TypeIdentifierKind,
+		Name:      *p.create_ident(name),
+		Generics:  map[int]TypeLiteral{},
 	}
 
 	is_generic := p.might_expect([]token_kind{left_angle_bracks})
 
 	if is_generic != nil {
 		p.backup()
-		result.Generics = parse_seperated_list(p, p.parse_type_literal, comma, left_angle_bracks, right_angle_bracks, false, false)
+		generics := parse_seperated_list(p, p.parse_type_literal, comma, left_angle_bracks, right_angle_bracks, false, false)
+
+		for i, generic := range generics {
+			result.Generics[i] = generic
+		}
 	}
 
 	return result
@@ -658,9 +666,12 @@ func (p *parser_s) parse_value_type_pair() ValueTypePair {
 func (p *parser_s) parse_struct_literal() StructLiteral {
 	defer p.catch()
 
-	var pairs StructLiteral = parse_seperated_list(p, p.parse_value_type_pair, semicolon, left_curly_bracks, right_curly_bracks, true, true)
+	values := parse_seperated_list(p, p.parse_value_type_pair, semicolon, left_curly_bracks, right_curly_bracks, true, true)
 
-	return pairs
+	return StructLiteral{
+		TypeKind_: StructLiteralKind,
+		Values:    values,
+	}
 }
 
 func (p *parser_s) parse_constrained_type() ConstrainedType {
@@ -684,7 +695,7 @@ func (p *parser_s) parse_constrained_type() ConstrainedType {
 	}
 
 	return ConstrainedType{
-		Name:       p.create_ident(name),
+		Name:       *p.create_ident(name),
 		Constraint: constraint,
 	}
 }
@@ -721,7 +732,7 @@ func (p *parser_s) parse_type_definition_statement() TypeDefinitionStatement {
 
 	if is_generic != nil {
 		p.backup()
-		result.Generics = parse_seperated_list(p, p.parse_constrained_type, comma, left_angle_bracks, right_angle_bracks, false, false)
+		result.Generics = generate_generics(p)
 	}
 
 	p.skip()
@@ -747,7 +758,7 @@ func (p *parser_s) parse_typed_parameter() TypedParameter {
 	p.skip()
 	typ := p.parse_type_literal()
 
-	var location common.Location
+	var location Location
 
 	if start != nil {
 		location = start.Location
@@ -783,19 +794,20 @@ func (p *parser_s) parse_trait_definition_statement() TraitDefinitionStatement {
 	name := p.must_expect([]token_kind{identifier})
 
 	result := TraitDefinitionStatement{
-		Name:     *p.create_ident(name),
-		Generics: []ConstrainedType{},
-		Mimics:   []TypeIdentifier{},
-		Hidden:   is_hidden != nil,
-		Kind_:    TraitDefinitionStatementKind,
-		location: start.Location,
+		Name:      *p.create_ident(name),
+		Generics:  []ConstrainedType{},
+		Mimics:    []TypeIdentifier{},
+		Hidden:    is_hidden != nil,
+		Kind_:     TraitDefinitionStatementKind,
+		TypeKind_: TraitTypeKind,
+		location:  start.Location,
 	}
 
 	is_generic := p.might_expect([]token_kind{left_angle_bracks})
 
 	if is_generic != nil {
 		p.backup()
-		result.Generics = parse_seperated_list(p, p.parse_constrained_type, comma, left_angle_bracks, right_angle_bracks, false, false)
+		result.Generics = generate_generics(p)
 	}
 
 	p.skip()
@@ -828,7 +840,7 @@ func (p *parser_s) parse_unbound_fun_signature() UnboundFunctionSignature {
 
 	if is_generic != nil {
 		p.backup()
-		generics = parse_seperated_list(p, p.parse_constrained_type, comma, left_angle_bracks, right_angle_bracks, false, false)
+		generics = generate_generics(p)
 	}
 
 	p.skip()
@@ -850,6 +862,7 @@ func (p *parser_s) parse_unbound_fun_signature() UnboundFunctionSignature {
 	p.skip()
 
 	return UnboundFunctionSignature{
+		TypeKind_:  FunTypeKind,
 		Name:       *p.create_ident(name),
 		Parameters: params,
 		Generics:   generics,
@@ -868,7 +881,7 @@ func (p *parser_s) parse_anonymous_fun_signature() AnonymousFunctionSignature {
 
 	if is_generic != nil {
 		p.backup()
-		generics = parse_seperated_list(p, p.parse_constrained_type, comma, left_angle_bracks, right_angle_bracks, false, false)
+		generics = generate_generics(p)
 	}
 
 	p.skip()
@@ -889,6 +902,7 @@ func (p *parser_s) parse_anonymous_fun_signature() AnonymousFunctionSignature {
 	p.skip()
 
 	return AnonymousFunctionSignature{
+		TypeKind_:  FunTypeKind,
 		Parameters: params,
 		Generics:   generics,
 		ReturnType: return_type,
@@ -915,7 +929,7 @@ func (p *parser_s) parse_bound_fun_signature() BoundFunctionSignature {
 
 	if is_generic != nil {
 		p.backup()
-		generics = parse_seperated_list(p, p.parse_constrained_type, comma, left_angle_bracks, right_angle_bracks, false, false)
+		generics = generate_generics(p)
 	}
 
 	p.skip()
@@ -1359,7 +1373,7 @@ func (p *parser_s) parse_call_expression() Expression {
 	defer p.catch()
 
 	if !p.is_left_callable(p.current_expression()) {
-		p.throw(common.ErrorMessages["uc_con"])
+		p.throw(ErrorMessages["uc_con"])
 	}
 
 	args := parse_seperated_list(p, p.parse_expression, comma, left_parens, right_parens, true, false)
@@ -1387,7 +1401,7 @@ func (p *parser_s) parse_member_expression() Expression {
 	}
 
 	if p.is_left_fun(p.current_expression()) {
-		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "read a value off of a function"))
+		p.throw(fmt.Sprintf(ErrorMessages["i_con"], "read a value off of a function"))
 	}
 
 	rhs_t := p.must_expect([]token_kind{identifier})
@@ -1413,7 +1427,7 @@ func (p *parser_s) parse_or_expression() Expression {
 
 	if !p.is_left_call(p.current_expression()) {
 		// if current expression is not a function call throw
-		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "recover from a non-function expression"))
+		p.throw(fmt.Sprintf(ErrorMessages["i_con"], "recover from a non-function expression"))
 	}
 
 	p.skip()
@@ -1441,7 +1455,7 @@ func (p *parser_s) parse_index_expression() Expression {
 	}
 
 	if p.is_left_fun(p.current_expression()) {
-		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "index a function"))
+		p.throw(fmt.Sprintf(ErrorMessages["i_con"], "index a function"))
 	}
 
 	p.must_expect([]token_kind{left_squre_bracks})
@@ -1593,7 +1607,7 @@ func (p *parser_s) parse_instanceof_expression() Expression {
 func (p *parser_s) parse_arithmetic_unary_expression() ArithmeticUnaryExpression {
 	defer p.catch()
 
-	var kind arithmetic_unary_kind
+	var kind ArithmeticUnaryKind
 	var expression Expression
 
 	if p.current_expression() == nil {
@@ -1612,7 +1626,7 @@ func (p *parser_s) parse_arithmetic_unary_expression() ArithmeticUnaryExpression
 	if reflect.TypeOf(expression) == reflect.TypeOf(CallExpression{}) {
 		p.backup()
 		defer p.advance()
-		p.throw(fmt.Sprintf(common.ErrorMessages["i_con"], "do this operation with a function call"))
+		p.throw(fmt.Sprintf(ErrorMessages["i_con"], "do this operation with a function call"))
 	}
 
 	p.skip()
@@ -1715,7 +1729,7 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 	case left_curly_bracks:
 		typ := TypeIdentifier{
 			Name:     p.current_expression(),
-			Generics: []TypeLiteral{},
+			Generics: map[int]TypeLiteral{},
 		}
 		entries := parse_seperated_list(p, p.parse_key_value_entry, comma, left_curly_bracks, right_curly_bracks, true, true)
 
@@ -1822,7 +1836,7 @@ func (p *parser_s) parse_match_expression() Expression {
 	return p.continue_expression()
 }
 
-func Parse(input []byte, filepath string) (Ast, common.Error) {
+func Parse(input []byte, filepath string) (Ast, Error) {
 	filename := path.Base(filepath)
 
 	parser := parser_s{

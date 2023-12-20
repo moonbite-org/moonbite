@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	parser "github.com/moonbite-org/moonbite/parser/cmd"
-	common "github.com/moonbite-org/moonbite/parser/common"
 )
 
 func assert_identifier(t *testing.T, given parser.IdentifierExpression, expected string) {
@@ -14,13 +13,13 @@ func assert_identifier(t *testing.T, given parser.IdentifierExpression, expected
 	}
 }
 
-func assert_no_error(t *testing.T, err common.Error) {
+func assert_no_error(t *testing.T, err parser.Error) {
 	if err.Exists {
 		t.Errorf("expected no error but got: %s", err)
 	}
 }
 
-func assert_error(t *testing.T, err common.Error) {
+func assert_error(t *testing.T, err parser.Error) {
 	if !err.Exists {
 		t.Errorf("expected error but no error is present")
 	}
@@ -32,9 +31,9 @@ func assert_string(t *testing.T, given, expected string) {
 	}
 }
 
-func assert_bool(t *testing.T, given, expexted bool) {
-	if given != expexted {
-		t.Errorf("expected bool to be %t but got %t", expexted, given)
+func assert_bool(t *testing.T, given, expected bool) {
+	if given != expected {
+		t.Errorf("expected bool to be %t but got %t", expected, given)
 	}
 }
 
@@ -55,7 +54,7 @@ func assert_type(t *testing.T, given, expected any) {
 
 func TestToken(t *testing.T) {
 	token := parser.Token{
-		Location:   common.Location{},
+		Location:   parser.Location{},
 		Literal:    "",
 		Raw:        "",
 		Offset:     0,
@@ -66,7 +65,7 @@ func TestToken(t *testing.T) {
 
 	token = parser.Token{
 		Kind:       parser.Whitespace,
-		Location:   common.Location{},
+		Location:   parser.Location{},
 		Literal:    "",
 		Raw:        "",
 		Offset:     0,
@@ -77,7 +76,7 @@ func TestToken(t *testing.T) {
 
 	token = parser.Token{
 		Kind:       parser.Keyword,
-		Location:   common.Location{},
+		Location:   parser.Location{},
 		Literal:    "as",
 		Raw:        "as",
 		Offset:     0,
@@ -205,13 +204,13 @@ func TestPackageStatement(t *testing.T) {
 }
 
 func TestUseStatement(t *testing.T) {
-	input := []byte("package main use os use binary as bin")
+	input := []byte("package main use \"os\" use \"binary\" as bin")
 	ast, err := parser.Parse(input, "test.mb")
 
 	assert_no_error(t, err)
 
-	assert_identifier(t, ast.Uses[0].Resource, "os")
-	assert_identifier(t, ast.Uses[1].Resource, "binary")
+	assert_string(t, ast.Uses[0].Resource.Value, "os")
+	assert_string(t, ast.Uses[1].Resource.Value, "binary")
 	assert_identifier(t, *ast.Uses[1].As, "bin")
 }
 
@@ -346,8 +345,8 @@ func TestTypeDefinitionStatement(t *testing.T) {
 	assert_type(t, definition.Name, parser.IdentifierExpression{})
 	assert_string(t, definition.Name.Value, "String")
 	assert_type(t, definition.Definition, parser.TypeIdentifier{})
-	assert_type(t, definition.Definition.(parser.TypeIdentifier).Name, &parser.IdentifierExpression{})
-	assert_string(t, definition.Definition.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "string")
+	assert_type(t, definition.Definition.(parser.TypeIdentifier).Name, parser.IdentifierExpression{})
+	assert_string(t, definition.Definition.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "string")
 	assert_int(t, len(definition.Generics), 0)
 	assert_int(t, len(definition.Implementations), 0)
 
@@ -356,13 +355,13 @@ func TestTypeDefinitionStatement(t *testing.T) {
 	assert_type(t, definition.Name, parser.IdentifierExpression{})
 	assert_string(t, definition.Name.Value, "String")
 	assert_type(t, definition.Definition, parser.TypeIdentifier{})
-	assert_type(t, definition.Definition.(parser.TypeIdentifier).Name, &parser.IdentifierExpression{})
-	assert_string(t, definition.Definition.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "Saturable")
+	assert_type(t, definition.Definition.(parser.TypeIdentifier).Name, parser.IdentifierExpression{})
+	assert_string(t, definition.Definition.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "Saturable")
 	assert_int(t, len(definition.Generics), 0)
 	assert_int(t, len(definition.Implementations), 1)
 	assert_type(t, definition.Implementations[0], parser.TypeIdentifier{})
-	assert_type(t, definition.Implementations[0].Name, &parser.IdentifierExpression{})
-	assert_string(t, definition.Implementations[0].Name.(*parser.IdentifierExpression).Value, "Observable")
+	assert_type(t, definition.Implementations[0].Name, parser.IdentifierExpression{})
+	assert_string(t, definition.Implementations[0].Name.(parser.IdentifierExpression).Value, "Observable")
 
 	definition = ast.Definitions[2].(parser.TypeDefinitionStatement)
 	assert_type(t, definition, parser.TypeDefinitionStatement{})
@@ -371,15 +370,15 @@ func TestTypeDefinitionStatement(t *testing.T) {
 	assert_type(t, definition.Definition, parser.StructLiteral{})
 	literal := definition.Definition.(parser.StructLiteral)
 
-	assert_int(t, len(literal), 2)
-	assert_type(t, literal[0], parser.ValueTypePair{})
-	assert_string(t, literal[0].Key.Value, "key")
-	assert_type(t, literal[0].Type, parser.TypeIdentifier{})
-	assert_string(t, literal[0].Type.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "typ")
-	assert_type(t, literal[1], parser.ValueTypePair{})
-	assert_string(t, literal[1].Key.Value, "key2")
-	assert_type(t, literal[1].Type, parser.TypeIdentifier{})
-	assert_string(t, literal[1].Type.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "typ2")
+	assert_int(t, len(literal.Values), 2)
+	assert_type(t, literal.Values[0], parser.ValueTypePair{})
+	assert_string(t, literal.Values[0].Key.Value, "key")
+	assert_type(t, literal.Values[0].Type, parser.TypeIdentifier{})
+	assert_string(t, literal.Values[0].Type.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "typ")
+	assert_type(t, literal.Values[1], parser.ValueTypePair{})
+	assert_string(t, literal.Values[1].Key.Value, "key2")
+	assert_type(t, literal.Values[1].Type, parser.TypeIdentifier{})
+	assert_string(t, literal.Values[1].Type.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "typ2")
 
 	definition = ast.Definitions[3].(parser.TypeDefinitionStatement)
 	assert_type(t, definition, parser.TypeDefinitionStatement{})
@@ -390,9 +389,9 @@ func TestTypeDefinitionStatement(t *testing.T) {
 
 	assert_string(t, operated.Operator, "&")
 	assert_type(t, operated.LeftHandSide, parser.TypeIdentifier{})
-	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "string")
+	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "string")
 	assert_type(t, operated.RightHandSide, parser.TypeIdentifier{})
-	assert_string(t, operated.RightHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "bool")
+	assert_string(t, operated.RightHandSide.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "bool")
 
 	definition = ast.Definitions[4].(parser.TypeDefinitionStatement)
 	assert_type(t, definition, parser.TypeDefinitionStatement{})
@@ -403,9 +402,9 @@ func TestTypeDefinitionStatement(t *testing.T) {
 
 	assert_string(t, operated.Operator, "|")
 	assert_type(t, operated.LeftHandSide, parser.TypeIdentifier{})
-	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "string")
+	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "string")
 	assert_type(t, operated.RightHandSide, parser.TypeIdentifier{})
-	assert_string(t, operated.RightHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "bool")
+	assert_string(t, operated.RightHandSide.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "bool")
 
 	definition = ast.Definitions[5].(parser.TypeDefinitionStatement)
 	assert_type(t, definition, parser.TypeDefinitionStatement{})
@@ -416,7 +415,7 @@ func TestTypeDefinitionStatement(t *testing.T) {
 
 	assert_string(t, operated.Operator, "&")
 	assert_type(t, operated.LeftHandSide, parser.TypeIdentifier{})
-	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "string")
+	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "string")
 	assert_type(t, operated.RightHandSide, parser.GroupType{})
 	assert_type(t, operated.RightHandSide.(parser.GroupType).Type, parser.OperatedType{})
 	operated = operated.RightHandSide.(parser.GroupType).Type.(parser.OperatedType)
@@ -430,7 +429,7 @@ func TestTypeDefinitionStatement(t *testing.T) {
 	typed_literal := definition.Definition.(parser.TypedLiteral)
 
 	assert_type(t, typed_literal.Type, parser.TypeIdentifier{})
-	assert_string(t, typed_literal.Type.Name.(*parser.IdentifierExpression).Value, "string")
+	assert_string(t, typed_literal.Type.Name.(parser.IdentifierExpression).Value, "string")
 	assert_type(t, typed_literal.Literal, parser.StringLiteralExpression{})
 	assert_string(t, typed_literal.Literal.(parser.StringLiteralExpression).Value, "data")
 }
@@ -514,7 +513,7 @@ func TestTraitDefinitionStatement(t *testing.T) {
 	assert_string(t, trait.Definition[0].Name.Value, "welcome")
 	assert_int(t, len(trait.Generics), 1)
 	assert_int(t, len(trait.Mimics), 2)
-	assert_string(t, (*trait.Definition[0].ReturnType).(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "String")
+	assert_string(t, (*trait.Definition[0].ReturnType).(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "String")
 }
 
 func TestLoopStatement(t *testing.T) {
@@ -840,8 +839,8 @@ func TestTypeCastExpression(t *testing.T) {
 	assert_type(t, expression.Value, parser.IdentifierExpression{})
 	assert_string(t, expression.Value.(parser.IdentifierExpression).Value, "data")
 	assert_type(t, expression.Type, parser.TypeIdentifier{})
-	assert_type(t, expression.Type.Name, &parser.IdentifierExpression{})
-	assert_string(t, expression.Type.Name.(*parser.IdentifierExpression).Value, "String")
+	assert_type(t, expression.Type.Name, parser.IdentifierExpression{})
+	assert_string(t, expression.Type.Name.(parser.IdentifierExpression).Value, "String")
 }
 
 func TestCaretExpression(t *testing.T) {
@@ -882,7 +881,7 @@ func TestInstanceofExpression(t *testing.T) {
 	assert_type(t, expression.RightHandSide, parser.TypeIdentifier{})
 
 	assert_string(t, expression.LeftHandSide.(parser.IdentifierExpression).Value, "data")
-	assert_string(t, expression.RightHandSide.(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "typ")
+	assert_string(t, expression.RightHandSide.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "typ")
 }
 
 func TestMatchSelfExpression(t *testing.T) {
@@ -1047,11 +1046,11 @@ func TestFunExpression(t *testing.T) {
 	assert_int(t, len((*decl.Value).(parser.AnonymousFunExpression).Signature.Generics), 2)
 	generics := (*decl.Value).(parser.AnonymousFunExpression).Signature.Generics
 
-	assert_type(t, generics[0].Name, &parser.IdentifierExpression{})
-	assert_string(t, generics[0].Name.(*parser.IdentifierExpression).Value, "T")
+	assert_type(t, generics[0].Name, parser.IdentifierExpression{})
+	assert_string(t, generics[0].Name.Value, "T")
 
-	assert_type(t, generics[1].Name, &parser.IdentifierExpression{})
-	assert_string(t, generics[1].Name.(*parser.IdentifierExpression).Value, "K")
+	assert_type(t, generics[1].Name, parser.IdentifierExpression{})
+	assert_string(t, generics[1].Name.Value, "K")
 
 	input = []byte(`package main 
 	const test = fun(data Int) String {
@@ -1075,7 +1074,7 @@ func TestFunExpression(t *testing.T) {
 
 	assert_string(t, expression.Signature.Parameters[0].Name.Value, "data")
 	assert_type(t, *expression.Signature.ReturnType, parser.TypeIdentifier{})
-	assert_string(t, (*expression.Signature.ReturnType).(parser.TypeIdentifier).Name.(*parser.IdentifierExpression).Value, "String")
+	assert_string(t, (*expression.Signature.ReturnType).(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "String")
 
 	input = []byte(`package main 
 	const test = fun(data Int) String {

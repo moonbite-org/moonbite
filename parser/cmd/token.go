@@ -2,8 +2,6 @@ package parser
 
 import (
 	"fmt"
-
-	common "github.com/moonbite-org/moonbite/parser/common"
 )
 
 type token_kind int
@@ -175,12 +173,12 @@ var token_map = map[token_kind]string{
 }
 
 type Token struct {
-	Kind       token_kind      `json:"kind"`
-	Location   common.Location `json:"location"`
-	Literal    string          `json:"literal"`
-	Raw        string          `json:"raw"`
-	Offset     int             `json:"offset"`
-	LineBreaks int             `json:"line_breaks"`
+	Kind       token_kind `json:"kind"`
+	Location   Location   `json:"location"`
+	Literal    string     `json:"literal"`
+	Raw        string     `json:"raw"`
+	Offset     int        `json:"offset"`
+	LineBreaks int        `json:"line_breaks"`
 }
 
 func (t Token) String() string {
