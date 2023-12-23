@@ -127,7 +127,8 @@ var token_map = map[token_kind]string{
 	ampersand:             "Ampersand",
 	assignment:            "Assignment",
 	arithmetic_assignment: "ArithmeticAssignment",
-	binary_operator:       "BinaryPredicate", // == != < > <= >=
+	exclamation:           "Exclamation",
+	binary_operator:       "BinaryOperator", // == != < > <= >=
 	caret:                 "Caret",
 	channel:               "Channel",
 	then:                  "Then",
@@ -184,13 +185,13 @@ type Token struct {
 func (t Token) String() string {
 	if t.Kind < Keyword {
 		if t.Kind >= Whitespace && t.Kind < Punctuation {
-			return fmt.Sprintf("ws[%d:%d][%d]", t.Location.Line, t.Location.Column, t.Offset)
+			return fmt.Sprintf("ws[%d:%d][%d]", t.Location.Start.Line, t.Location.Start.Column, t.Offset)
 		} else {
-			return fmt.Sprintf("%s(%s)[%d:%d][%d]", token_map[t.Kind], t.Literal, t.Location.Line, t.Location.Column, t.Offset)
+			return fmt.Sprintf("%s(%s)[%d:%d][%d]", token_map[t.Kind], t.Literal, t.Location.Start.Line, t.Location.Start.Column, t.Offset)
 		}
 	}
 
-	return fmt.Sprintf("<%s>[%d:%d][%d]", t.Literal, t.Location.Line, t.Location.Column, t.Offset)
+	return fmt.Sprintf("<%s>[%d:%d][%d]", t.Literal, t.Location.Start.Line, t.Location.Start.Column, t.Offset)
 }
 
 const eof rune = -1

@@ -66,6 +66,7 @@ const (
 	GroupTypeKind      TypeKind = "type:group"
 	FunTypeKind        TypeKind = "type:fun"
 	TraitTypeKind      TypeKind = "type:trait"
+	BuiltinTypeKind    TypeKind = "type:builtin"
 
 	// functions
 	UnboundFunctionSignatureKind   SignatureKind = "signature:unbound"
@@ -170,6 +171,7 @@ func (t OperatedType) Location() Location {
 type ValueTypePair struct {
 	Key      IdentifierExpression `json:"key"`
 	Type     TypeLiteral          `json:"type"`
+	Hidden   bool                 `json:"hidden"`
 	Location Location             `json:"location"`
 }
 
@@ -196,16 +198,16 @@ type TypedParameter struct {
 
 type FunctionSignature interface {
 	SignatureKind() SignatureKind
-	GetGenerics() []ConstrainedType
+	GetGenerics() map[string]ConstrainedType
 	GetParameters() []TypedParameter
 	GetReturnType() *TypeLiteral
 }
 
 type AnonymousFunctionSignature struct {
-	TypeKind_  TypeKind          `json:"type_kind"`
-	Parameters []TypedParameter  `json:"parameters"`
-	Generics   []ConstrainedType `json:"generics"`
-	ReturnType *TypeLiteral      `json:"return_type"`
+	TypeKind_  TypeKind                   `json:"type_kind"`
+	Parameters []TypedParameter           `json:"parameters"`
+	Generics   map[string]ConstrainedType `json:"generics"`
+	ReturnType *TypeLiteral               `json:"return_type"`
 	location   Location
 }
 
@@ -221,7 +223,7 @@ func (s AnonymousFunctionSignature) TypeKind() TypeKind {
 	return FunTypeKind
 }
 
-func (s AnonymousFunctionSignature) GetGenerics() []ConstrainedType {
+func (s AnonymousFunctionSignature) GetGenerics() map[string]ConstrainedType {
 	return s.Generics
 }
 
@@ -234,11 +236,11 @@ func (s AnonymousFunctionSignature) GetReturnType() *TypeLiteral {
 }
 
 type UnboundFunctionSignature struct {
-	TypeKind_  TypeKind             `json:"type_kind"`
-	Name       IdentifierExpression `json:"name"`
-	Parameters []TypedParameter     `json:"parameters"`
-	Generics   []ConstrainedType    `json:"generics"`
-	ReturnType *TypeLiteral         `json:"return_type"`
+	TypeKind_  TypeKind                   `json:"type_kind"`
+	Name       IdentifierExpression       `json:"name"`
+	Parameters []TypedParameter           `json:"parameters"`
+	Generics   map[string]ConstrainedType `json:"generics"`
+	ReturnType *TypeLiteral               `json:"return_type"`
 	location   Location
 }
 
@@ -254,7 +256,7 @@ func (s UnboundFunctionSignature) TypeKind() TypeKind {
 	return FunTypeKind
 }
 
-func (s UnboundFunctionSignature) GetGenerics() []ConstrainedType {
+func (s UnboundFunctionSignature) GetGenerics() map[string]ConstrainedType {
 	return s.Generics
 }
 
@@ -267,11 +269,11 @@ func (s UnboundFunctionSignature) GetReturnType() *TypeLiteral {
 }
 
 type BoundFunctionSignature struct {
-	Name       IdentifierExpression `json:"name"`
-	For        TypeIdentifier       `json:"for"`
-	Generics   []ConstrainedType    `json:"generics"`
-	Parameters []TypedParameter     `json:"parameters"`
-	ReturnType *TypeLiteral         `json:"return_type"`
+	Name       IdentifierExpression       `json:"name"`
+	For        TypeIdentifier             `json:"for"`
+	Generics   map[string]ConstrainedType `json:"generics"`
+	Parameters []TypedParameter           `json:"parameters"`
+	ReturnType *TypeLiteral               `json:"return_type"`
 	location   Location
 }
 
@@ -287,7 +289,7 @@ func (s BoundFunctionSignature) TypeKind() TypeKind {
 	return FunTypeKind
 }
 
-func (s BoundFunctionSignature) GetGenerics() []ConstrainedType {
+func (s BoundFunctionSignature) GetGenerics() map[string]ConstrainedType {
 	return s.Generics
 }
 
@@ -420,12 +422,12 @@ func (s UseStatement) Location() Location {
 }
 
 type TypeDefinitionStatement struct {
-	Kind_           StatementKind        `json:"kind"`
-	Name            IdentifierExpression `json:"name"`
-	Generics        []ConstrainedType    `json:"generics"`
-	Implementations []TypeIdentifier     `json:"implementations"`
-	Definition      TypeLiteral          `json:"definiton"`
-	Hidden          bool                 `json:"hidden"`
+	Kind_           StatementKind              `json:"kind"`
+	Name            IdentifierExpression       `json:"name"`
+	Generics        map[string]ConstrainedType `json:"generics"`
+	Implementations []TypeIdentifier           `json:"implementations"`
+	Definition      TypeLiteral                `json:"definiton"`
+	Hidden          bool                       `json:"hidden"`
 	location        Location
 }
 
@@ -446,7 +448,7 @@ type TraitDefinitionStatement struct {
 	TypeKind_ TypeKind      `json:"type_kind"`
 
 	Name       IdentifierExpression       `json:"name"`
-	Generics   []ConstrainedType          `json:"generics"`
+	Generics   map[string]ConstrainedType `json:"generics"`
 	Mimics     []TypeIdentifier           `json:"mimics"`
 	Definition []UnboundFunctionSignature `json:"definition"`
 	Hidden     bool                       `json:"hidden"`

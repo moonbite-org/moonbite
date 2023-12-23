@@ -27,11 +27,16 @@ var ErrorKindMap = map[ErrorKind]string{
 	CompileError: "Compile Error",
 }
 
+type Position struct {
+	Line   int `json:"line"`
+	Column int `json:"column"`
+}
+
 type Location struct {
-	File   string `json:"file"`
-	Offset int    `json:"offset"`
-	Line   int    `json:"line"`
-	Column int    `json:"column"`
+	File   string   `json:"file"`
+	Offset int      `json:"offset"`
+	Start  Position `json:"start"`
+	End    Position `json:"end"`
 }
 
 type Error struct {
@@ -45,7 +50,7 @@ func (e Error) String() string {
 	if !e.Exists {
 		return ""
 	}
-	return fmt.Sprintf("%s: %s at %d:%d in %s", ErrorKindMap[e.Kind], e.Reason, e.Location.Line, e.Location.Column, e.Location.File)
+	return fmt.Sprintf("%s: %s at %d:%d in %s", ErrorKindMap[e.Kind], e.Reason, e.Location.Start.Line, e.Location.Start.Column, e.Location.File)
 }
 
 func CreateAnonError(kind ErrorKind, reason string) Error {
@@ -53,8 +58,8 @@ func CreateAnonError(kind ErrorKind, reason string) Error {
 		Kind:   kind,
 		Reason: reason,
 		Location: Location{
-			Line:   0,
-			Column: 0,
+			Start:  Position{},
+			End:    Position{},
 			Offset: 0,
 			File:   "",
 		},
@@ -75,8 +80,8 @@ var EmptyError = Error{
 	Kind:   0,
 	Reason: "",
 	Location: Location{
-		Line:   0,
-		Column: 0,
+		Start:  Position{},
+		End:    Position{},
 		Offset: 0,
 		File:   "",
 	},

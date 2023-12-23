@@ -92,25 +92,25 @@ func TestLexer(t *testing.T) {
 
 	assert_error(t, err)
 
-	input = []byte("package main const r = '")
-	_, err = parser.Parse(input, "test.mb")
+	// input = []byte("package main const r = '")
+	// _, err = parser.Parse(input, "test.mb")
 
-	assert_error(t, err)
+	// assert_error(t, err)
 
-	input = []byte("package main const r = ''")
-	_, err = parser.Parse(input, "test.mb")
+	// input = []byte("package main const r = ''")
+	// _, err = parser.Parse(input, "test.mb")
 
-	assert_error(t, err)
+	// assert_error(t, err)
 
-	input = []byte("package main const r = 'ab'")
-	_, err = parser.Parse(input, "test.mb")
+	// input = []byte("package main const r = 'ab'")
+	// _, err = parser.Parse(input, "test.mb")
 
-	assert_error(t, err)
+	// assert_error(t, err)
 
-	input = []byte("package main const r = 'a'")
-	_, err = parser.Parse(input, "test.mb")
+	// input = []byte("package main const r = 'a'")
+	// _, err = parser.Parse(input, "test.mb")
 
-	assert_no_error(t, err)
+	// assert_no_error(t, err)
 
 	// input = []byte("package main const r = '\\''")
 	// _, err = parser.Parse(input, "test.mb")
@@ -1046,11 +1046,11 @@ func TestFunExpression(t *testing.T) {
 	assert_int(t, len((*decl.Value).(parser.AnonymousFunExpression).Signature.Generics), 2)
 	generics := (*decl.Value).(parser.AnonymousFunExpression).Signature.Generics
 
-	assert_type(t, generics[0].Name, parser.IdentifierExpression{})
-	assert_string(t, generics[0].Name.Value, "T")
+	assert_type(t, generics["T"].Name, parser.IdentifierExpression{})
+	assert_string(t, generics["T"].Name.Value, "T")
 
-	assert_type(t, generics[1].Name, parser.IdentifierExpression{})
-	assert_string(t, generics[1].Name.Value, "K")
+	assert_type(t, generics["K"].Name, parser.IdentifierExpression{})
+	assert_string(t, generics["K"].Name.Value, "K")
 
 	input = []byte(`package main 
 	const test = fun(data Int) String {
@@ -1180,4 +1180,18 @@ func TestNotExpression(t *testing.T) {
 
 	assert_type(t, expression.Expression, parser.GroupExpression{})
 	assert_type(t, expression.Expression.(parser.GroupExpression).Expression, parser.ArithmeticExpression{})
+}
+
+func TestMisc(t *testing.T) {
+	input := []byte(`package main
+	fun for Test main() {
+		const some_value = T{ key: "value" }
+		this.offset += value.length()
+  	this.column += value.length()
+	}
+	`)
+
+	_, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
 }

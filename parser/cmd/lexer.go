@@ -126,9 +126,13 @@ func (l lexer) create_token(kind token_kind, length int) Token {
 		literal = []rune(strings.ReplaceAll(string(literal), "\\", ""))
 	}
 
+	location := l.location
+	location.End.Column = location.Start.Column + length
+	location.End.Line = location.Start.Line + line_breaks
+
 	return Token{
 		Kind:       kind,
-		Location:   l.location,
+		Location:   location,
 		Literal:    string(literal),
 		Raw:        string(raw),
 		Offset:     l.offset,
@@ -138,12 +142,12 @@ func (l lexer) create_token(kind token_kind, length int) Token {
 
 func (l *lexer) register_token(token Token) {
 	if token.LineBreaks != 0 {
-		l.location.Column = 1
+		l.location.Start.Column = 1
 	} else {
-		l.location.Column += len(token.Raw)
+		l.location.Start.Column += len(token.Raw)
 	}
 
-	l.location.Line += token.LineBreaks
+	l.location.Start.Line += token.LineBreaks
 	l.location.Offset += len(token.Raw)
 
 	l.tokens = append(l.tokens, token)
@@ -154,8 +158,8 @@ func lex(input []byte, filename string) ([]Token, Error) {
 	lexer := lexer{
 		input: []rune(string(input)),
 		location: Location{
-			Line:   1,
-			Column: 1,
+			Start:  Position{Line: 1, Column: 1},
+			End:    Position{Line: 1, Column: 1},
 			Offset: 0,
 			File:   filename,
 		},
@@ -274,13 +278,16 @@ func (l *lexer) lex_rune_literal() {
 	if l.next_rune() == eof || l.next_rune() == '\n' || l.next_rune() == '\r' {
 		l.throw(fmt.Sprintf(ErrorMessages["u_eof"], "a \"'\" (single quote) to close the rune literal"))
 	} else {
-		if length == 1 {
-			l.backup_by(length - 1)
-			l.register_token(l.create_token(rune_literal, length))
-			l.advance()
-		} else {
-			l.throw(fmt.Sprintf(ErrorMessages["i_val"], "Rune literals must exactly be 1 character"))
-		}
+		// if length == 1 {
+		// 	l.backup_by(length - 1)
+		// 	l.register_token(l.create_token(rune_literal, length))
+		// 	l.advance()
+		// } else {
+		// 	l.throw(fmt.Sprintf(ErrorMessages["i_val"], "Rune literals must exactly be 1 character"))
+		// }
+		l.backup_by(length - 1)
+		l.register_token(l.create_token(rune_literal, length))
+		l.advance()
 	}
 }
 
@@ -428,7 +435,13 @@ func (l *lexer) lex_operator_chars() {
 			token = l.create_token(percent, 1)
 		}
 	case '!':
-		token = l.create_token(exclamation, 1)
+		next := l.next_rune()
+
+		if next == '=' {
+			token = l.create_token(binary_operator, 2)
+		} else {
+			token = l.create_token(exclamation, 1)
+		}
 	case '&':
 		next := l.next_rune()
 

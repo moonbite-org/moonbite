@@ -657,14 +657,22 @@ func (p *parser_s) parse_type_identifier() TypeIdentifier {
 func (p *parser_s) parse_value_type_pair() ValueTypePair {
 	defer p.catch()
 
-	key := p.must_expect([]token_kind{identifier})
+	var key Token
+	start := p.must_expect([]token_kind{identifier, hidden_keyword})
+	if start.Kind == hidden_keyword {
+		p.skip()
+		key = p.must_expect([]token_kind{identifier})
+	} else {
+		key = start
+	}
 	p.skip()
 	typ := p.parse_type_literal()
 
 	return ValueTypePair{
 		Key:      *p.create_ident(key),
 		Type:     typ,
-		Location: key.Location,
+		Hidden:   start.Kind == hidden_keyword,
+		Location: start.Location,
 	}
 }
 
@@ -728,7 +736,7 @@ func (p *parser_s) parse_type_definition_statement() TypeDefinitionStatement {
 
 	result := TypeDefinitionStatement{
 		Name:            *p.create_ident(name),
-		Generics:        []ConstrainedType{},
+		Generics:        map[string]ConstrainedType{},
 		Implementations: []TypeIdentifier{},
 		Definition:      TypeIdentifier{},
 		Hidden:          is_hidden != nil,
@@ -803,7 +811,7 @@ func (p *parser_s) parse_trait_definition_statement() TraitDefinitionStatement {
 
 	result := TraitDefinitionStatement{
 		Name:      *p.create_ident(name),
-		Generics:  []ConstrainedType{},
+		Generics:  map[string]ConstrainedType{},
 		Mimics:    []TypeIdentifier{},
 		Hidden:    is_hidden != nil,
 		Kind_:     TraitDefinitionStatementKind,
@@ -843,7 +851,7 @@ func (p *parser_s) parse_unbound_fun_signature() UnboundFunctionSignature {
 	p.skip()
 	name := p.must_expect([]token_kind{identifier})
 
-	generics := []ConstrainedType{}
+	generics := map[string]ConstrainedType{}
 	is_generic := p.might_expect([]token_kind{left_angle_bracks})
 
 	if is_generic != nil {
@@ -884,7 +892,7 @@ func (p *parser_s) parse_anonymous_fun_signature() AnonymousFunctionSignature {
 
 	start := p.must_expect([]token_kind{fun_keyword})
 
-	generics := []ConstrainedType{}
+	generics := map[string]ConstrainedType{}
 	is_generic := p.might_expect([]token_kind{left_angle_bracks})
 
 	if is_generic != nil {
@@ -932,7 +940,7 @@ func (p *parser_s) parse_bound_fun_signature() BoundFunctionSignature {
 	p.skip()
 	name := p.must_expect([]token_kind{identifier})
 
-	generics := []ConstrainedType{}
+	generics := map[string]ConstrainedType{}
 	is_generic := p.might_expect([]token_kind{left_angle_bracks})
 
 	if is_generic != nil {
@@ -1231,7 +1239,7 @@ func (p *parser_s) continue_expression() Expression {
 		}
 
 		p.set_current_expression(p.parse_literal_expression())
-		is_ended := p.might_expect([]token_kind{new_line})
+		is_ended := p.might_expect([]token_kind{new_line, whitespace})
 
 		if is_ended != nil {
 			return p.current_expression()
@@ -1696,6 +1704,7 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			location: current.Location,
 		}
 		p.advance()
+		p.skip()
 	case rune_literal:
 		result = RuneLiteralExpression{
 			Value:    rune(current.Literal[0]),
@@ -1703,6 +1712,7 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			location: current.Location,
 		}
 		p.advance()
+		p.skip()
 	case bool_literal:
 		result = BoolLiteralExpression{
 			Value:    current.Literal == "true",
@@ -1710,6 +1720,7 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			location: current.Location,
 		}
 		p.advance()
+		p.skip()
 	case number_literal:
 		result = NumberLiteralExpression{
 			Value:    create_number_literal(*p, current.Literal),
@@ -1717,6 +1728,7 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			location: current.Location,
 		}
 		p.advance()
+		p.skip()
 	case left_squre_bracks:
 		values := parse_seperated_list(p, p.parse_expression, comma, left_squre_bracks, right_squre_bracks, true, false)
 
@@ -1734,6 +1746,11 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			Kind_:    ListLiteralExpressionKind,
 			location: current.Location,
 		}
+
+		p.backup()
+		if p.current_token().Kind != whitespace && p.current_token().Kind != new_line {
+			p.advance()
+		}
 	case left_curly_bracks:
 		typ := TypeIdentifier{
 			Name:     p.current_expression(),
@@ -1747,6 +1764,11 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			Kind_:    InstanceLiteralExpressionKind,
 			location: typ.Name.Location(),
 		}
+
+		p.backup()
+		if p.current_token().Kind != whitespace && p.current_token().Kind != new_line {
+			p.advance()
+		}
 	default:
 		result = StringLiteralExpression{
 			Value:    current.Literal,
@@ -1756,7 +1778,6 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 		p.advance()
 	}
 
-	p.skip()
 	return result
 }
 

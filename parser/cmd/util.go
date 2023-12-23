@@ -15,7 +15,10 @@ func (p *parser_s) throw(reason string) {
 		last_line := len(split)
 		last_col := len(split[len(split)-1]) + 1
 
-		location = Location{Line: last_line, Column: last_col}
+		location = Location{
+			Start: Position{Line: last_line, Column: last_col},
+			End:   Position{Line: last_line, Column: last_col},
+		}
 	} else {
 		location = current.Location
 	}
@@ -225,19 +228,21 @@ func create_number_literal(p parser_s, literal string) NumberLiteral {
 
 	return NumberLiteral{
 		Type: TypeIdentifier{
-			Name:     IdentifierExpression{Value: "int"},
+			Name:     IdentifierExpression{Value: "int32"},
 			Generics: map[int]TypeLiteral{},
 		},
 		Value: int(v),
 	}
 }
 
-func generate_generics(p *parser_s) []ConstrainedType {
+func generate_generics(p *parser_s) map[string]ConstrainedType {
+	result := map[string]ConstrainedType{}
 	generics := parse_seperated_list(p, p.parse_constrained_type, comma, left_angle_bracks, right_angle_bracks, false, false)
 
 	for i, generic := range generics {
 		generic.Index = i
+		result[generic.Name.Value] = generic
 	}
 
-	return generics
+	return result
 }
