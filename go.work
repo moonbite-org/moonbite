@@ -3,6 +3,8 @@ go 1.21.0
 use (
 	./common
 	./compiler
+	./error
 	./parser
 	./typechecker
+	./vm
 )

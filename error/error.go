@@ -40,16 +40,22 @@ type Location struct {
 }
 
 type Error struct {
-	Kind     ErrorKind
-	Reason   string
-	Location Location
-	Exists   bool
+	Kind      ErrorKind
+	Reason    string
+	Location  Location
+	Exists    bool
+	Anonymous bool
 }
 
 func (e Error) String() string {
 	if !e.Exists {
 		return ""
 	}
+
+	if e.Anonymous {
+		return fmt.Sprintf("%s: %s", ErrorKindMap[e.Kind], e.Reason)
+	}
+
 	return fmt.Sprintf("%s: %s at %d:%d in %s", ErrorKindMap[e.Kind], e.Reason, e.Location.Start.Line, e.Location.Start.Column, e.Location.File)
 }
 
@@ -63,7 +69,8 @@ func CreateAnonError(kind ErrorKind, reason string) Error {
 			Offset: 0,
 			File:   "",
 		},
-		Exists: true,
+		Exists:    true,
+		Anonymous: true,
 	}
 }
 
@@ -94,5 +101,6 @@ var EmptyError = Error{
 		Offset: 0,
 		File:   "",
 	},
-	Exists: false,
+	Exists:    false,
+	Anonymous: true,
 }

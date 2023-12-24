@@ -3,9 +3,8 @@ package types
 
 use "strconv"
 
-trait Iterable<T> {
-  fun next() T;
-  fun done() bool;
+trait Saturable<T> {
+  fun default() T
 }
 
 trait Printable {
@@ -13,58 +12,97 @@ trait Printable {
 }
 
 type Uint8 implements [Printable] uint8
-fun for Uint8 string() String {
+fun for Uint8 string() string {
   return strconv.itoa(this) or giveup
 }
 
 type Uint16 implements [Printable] uint16
-fun for Uint16 string() String {
+fun for Uint16 string() string {
   return strconv.itoa(this) or giveup
 }
 
 type Uint32 implements [Printable] uint32
-fun for Uint32 string() String {
+fun for Uint32 string() string {
   return strconv.itoa(this) or giveup
 }
 
 type Uint64 implements [Printable] uint64
-fun for Uint64 string() String {
+fun for Uint64 string() string {
   return strconv.itoa(this) or giveup
 }
 
 
 type Int8 implements [Printable] int8
-fun for Int8 string() String {
+fun for Int8 string() string {
   return strconv.itoa(this) or giveup
 }
 
 type Int16 implements [Printable] int16
-fun for Int16 string() String {
+fun for Int16 string() string {
   return strconv.itoa(this) or giveup
 }
 
 type Int32 implements [Printable] int32
-fun for Int32 string() String {
+fun for Int32 string() string {
   return strconv.itoa(this) or giveup
 }
 
 type Int64 implements [Printable] int64
-fun for Int64 string() String {
+fun for Int64 string() string {
   return strconv.itoa(this) or giveup
 }
 
+type Float32 implements [Printable] float32
 
-type List<T Printable> implements [Iterable<T>, Printable] iterable
+type Float64 implements [Printable] float64
 
-fun for List length() Uint32 {
-  var count = 0
+type Number Uint8 | Uint16 | Uint32 | Uint64 | Int8 | Int16 | Int32 | Int64 | Float32 | Float64
 
-  for (!this.done()) {
-    count++
-    this.next()
+type Integer Uint8 | Uint16 | Uint32 | Uint64 | Int8 | Int16 | Int32 | Int64
+
+type Int Int32
+
+trait Writable {
+  fun write(p List<Byte>) Int
+}
+
+trait Readable {
+  fun read(p List<Byte>) Int
+}
+
+trait Streamable mimics [Writable, Readable] {}
+
+type IteratorResult<T> {
+  value T;
+  is_done Bool;
+}
+
+trait Iterable<T> {
+  fun next() IteratorResult<T>
+}
+
+type List<T> implements [Saturable<Iterable<T>>, Iterable<T>] iterable
+
+fun for List default() List<T> {
+  return []
+}
+
+fun for List next() IteratorResult<T> {
+  for (var i = 0; i < this.length(); i++) {
+    yield IteratorResult{
+      value: this[i],
+      is_done: false
+    }
   }
 
-  return count
+  return IteratorResult{
+    value: T{},
+    is_done: true
+  }
+}
+
+fun for List length() Int {
+  return len(this)
 }
 
 fun for List push(value T) {
@@ -75,7 +113,7 @@ fun for List last() T {
   return this[this.length() - 1]
 }
 
-fun for List string() String {
+fun for List string() string {
   var result = "["
 
   for (,value of this) {
@@ -91,9 +129,9 @@ fun for List string() String {
 
 type Rune Uint32
 
-type String implements [Printable] List<Rune>
+type String implements [Saturable<List<Rune>>] List<Rune>
 
-fun for String string() String {
+fun for String string() string {
   var result = ""
 
   for (,rune of this) {
@@ -101,6 +139,19 @@ fun for String string() String {
   }
 
   return result
+}
+
+fun for String slice(start Uint32, end Uint32) {
+}
+
+type Bool implements [Printable] bool
+
+fun for Bool string() string {
+  if (this) {
+    return "true"
+  } else {
+    return "false"
+  }
 }
 
 trait Observable<T> {
