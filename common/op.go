@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 type Op byte
@@ -25,6 +26,7 @@ const (
 	OpMul
 	OpDiv
 	OpMod
+	OpArray
 	OpNegate
 	OpEqual
 	OpNotEqual
@@ -49,6 +51,7 @@ var op_map = map[Op]string{
 	OpMul:                "Mul",
 	OpDiv:                "Div",
 	OpMod:                "Mod",
+	OpArray:              "Array",
 	OpNegate:             "Negate",
 	OpEqual:              "Equal",
 	OpNotEqual:           "NotEqual",
@@ -90,11 +93,52 @@ func BytesToInt[T uint32 | uint64](data []byte) T {
 	}
 }
 
-func MakeOp(op Op, operands ...uint32) []byte {
-	result := []byte{byte(op)}
+type Instruction struct {
+	Op       Op
+	Operands []uint32
+}
+
+func (i Instruction) GetBytes() []byte {
+	result := []byte{}
+	result = append(result, byte(i.Op))
+
+	for _, operand := range i.Operands {
+		result = append(result, IntToBytes(operand)...)
+	}
+
+	return result
+}
+
+func (i Instruction) String() string {
+	operands := []string{}
+
+	for _, operand := range i.Operands {
+		operands = append(operands, fmt.Sprintf("%d", operand))
+	}
+
+	return fmt.Sprintf("%s(%s)", op_map[i.Op], strings.Join(operands, " "))
+}
+
+func NewInstruction(op Op, operands ...int) Instruction {
+	u_operands := []uint32{}
 
 	for _, operand := range operands {
-		result = append(result, IntToBytes(operand)...)
+		u_operands = append(u_operands, uint32(operand))
+	}
+
+	return Instruction{
+		Op:       op,
+		Operands: u_operands,
+	}
+}
+
+type InstructionSet []Instruction
+
+func (s InstructionSet) GetBytes() []byte {
+	result := []byte{}
+
+	for _, instruction := range s {
+		result = append(result, instruction.GetBytes()...)
 	}
 
 	return result

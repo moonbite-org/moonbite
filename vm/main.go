@@ -11,6 +11,4 @@ func main() {
 	if err := c.Compile(); err.Exists {
 		fmt.Println(err)
 	}
-
-	fmt.Println(c.Modules)
 }

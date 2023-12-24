@@ -178,7 +178,7 @@ func (o MapObject) GetValue() interface{} {
 }
 
 type FunctionObject struct {
-	Value InstructionList
+	Value InstructionSet
 }
 
 func (o FunctionObject) Kind() ObjectKind {
@@ -203,8 +203,8 @@ func ObjectFromLiteral(literal parser.LiteralExpression) Object {
 }
 
 type ConstantPool struct {
-	Values      [1024]Object
-	NextPointer int
+	Values  [1024]Object
+	pointer int
 }
 
 func (p *ConstantPool) Add(value Object) int {
@@ -214,10 +214,14 @@ func (p *ConstantPool) Add(value Object) int {
 		return has
 	}
 
-	p.Values[p.NextPointer] = value
-	p.NextPointer++
+	p.Values[p.pointer] = value
+	p.pointer++
 
-	return p.NextPointer - 1
+	return p.pointer - 1
+}
+
+func (p *ConstantPool) Get(index int) Object {
+	return p.Values[index]
 }
 
 func (p ConstantPool) Has(value Object) int {
@@ -233,17 +237,15 @@ func (p ConstantPool) Has(value Object) int {
 	return -1
 }
 
-type InstructionList []byte
-
-func (l *InstructionList) Add(op []byte) {
-	*l = append(*l, op...)
-}
-
-func (l InstructionList) String() string {
+func (p ConstantPool) String() string {
 	result := []string{}
 
-	for _, i := range l {
-		result = append(result, Op(i).String())
+	for i, constant := range p.Values {
+		if constant == nil {
+			break
+		}
+
+		result = append(result, fmt.Sprintf("%d: %+v", i, constant))
 	}
 
 	return fmt.Sprintf("[%s]", strings.Join(result, " "))

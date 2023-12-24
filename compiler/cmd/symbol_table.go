@@ -1,15 +1,24 @@
 package cmd
 
+import (
+	"fmt"
+	"strings"
+
+	parser "github.com/moonbite-org/moonbite/parser/cmd"
+)
+
 type SymbolScope string
 
 const (
 	GlobalScope SymbolScope = "scope:global"
+	LocalScope  SymbolScope = "scope:local"
 )
 
 type Symbol struct {
 	Name  string
 	Scope SymbolScope
 	Index int
+	Kind  parser.VarKind
 }
 
 type SymbolTable struct {
@@ -17,11 +26,12 @@ type SymbolTable struct {
 	count int
 }
 
-func (t *SymbolTable) Define(name string) Symbol {
+func (t *SymbolTable) Define(name string, kind parser.VarKind, scope SymbolScope) Symbol {
 	symbol := Symbol{
 		Name:  name,
-		Scope: GlobalScope,
+		Scope: scope,
 		Index: t.count,
+		Kind:  kind,
 	}
 	t.count++
 	t.store[name] = symbol
@@ -30,8 +40,23 @@ func (t *SymbolTable) Define(name string) Symbol {
 }
 
 func (t SymbolTable) Resolve(name string) *Symbol {
-	symbol := t.store[name]
+	symbol, ok := t.store[name]
+
+	if !ok {
+		return nil
+	}
+
 	return &symbol
+}
+
+func (t SymbolTable) String() string {
+	result := []string{}
+
+	for name, symbol := range t.store {
+		result = append(result, fmt.Sprintf("%s: {%d %s %s}", name, symbol.Index, symbol.Scope, symbol.Kind))
+	}
+
+	return fmt.Sprintf("[%s]", strings.Join(result, " "))
 }
 
 func NewSymbolTable() *SymbolTable {
