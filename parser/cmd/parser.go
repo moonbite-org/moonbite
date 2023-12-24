@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path"
 	"reflect"
+
+	errors "github.com/moonbite-org/moonbite/error"
 )
 
 // extra allowed keywords inside code blocks
@@ -15,7 +17,7 @@ type parser_s struct {
 	input            []byte
 	offset           int
 	tokens           []Token
-	error            Error
+	error            errors.Error
 	ast              Ast
 	expressions      []Expression
 	is_match_context bool
@@ -439,6 +441,8 @@ func (p *parser_s) parse_unipartite_loop_predicate() UnipartiteLoopPredicate {
 	}
 
 	return UnipartiteLoopPredicate{
+		Kind_: UnipartiteLoopKind,
+
 		Expression: expression,
 	}
 }
@@ -448,7 +452,9 @@ func (p *parser_s) parse_bipartite_loop_predicate() LoopPredicate {
 
 	token := p.might_expect([]token_kind{identifier, comma})
 
-	result := BipartiteLoopPredicate{}
+	result := BipartiteLoopPredicate{
+		Kind_: BipartiteLoopKind,
+	}
 
 	switch token.Kind {
 	case identifier:
@@ -496,7 +502,9 @@ func (p *parser_s) parse_bipartite_loop_predicate() LoopPredicate {
 func (p *parser_s) parse_tripartite_loop_predicate() TripartiteLoopPredicate {
 	defer p.catch()
 
-	result := TripartiteLoopPredicate{}
+	result := TripartiteLoopPredicate{
+		Kind_: TripartiteLoopKind,
+	}
 
 	is_decl_empty := p.might_expect([]token_kind{semicolon})
 
@@ -606,7 +614,7 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 				location:  start,
 			}
 		} else {
-			p.throw(fmt.Sprintf(ErrorMessages["i_con"], "use a struct literal to create a type literal"))
+			p.throw(fmt.Sprintf(errors.ErrorMessages["i_con"], "use a struct literal to create a type literal"))
 		}
 	}
 	p.skip()
@@ -774,7 +782,7 @@ func (p *parser_s) parse_typed_parameter() TypedParameter {
 	p.skip()
 	typ := p.parse_type_literal()
 
-	var location Location
+	var location errors.Location
 
 	if start != nil {
 		location = start.Location
@@ -1389,7 +1397,7 @@ func (p *parser_s) parse_call_expression() Expression {
 	defer p.catch()
 
 	if !p.is_left_callable(p.current_expression()) {
-		p.throw(ErrorMessages["uc_con"])
+		p.throw(errors.ErrorMessages["uc_con"])
 	}
 
 	args := parse_seperated_list(p, p.parse_expression, comma, left_parens, right_parens, true, false)
@@ -1417,7 +1425,7 @@ func (p *parser_s) parse_member_expression() Expression {
 	}
 
 	if p.is_left_fun(p.current_expression()) {
-		p.throw(fmt.Sprintf(ErrorMessages["i_con"], "read a value off of a function"))
+		p.throw(fmt.Sprintf(errors.ErrorMessages["i_con"], "read a value off of a function"))
 	}
 
 	rhs_t := p.must_expect([]token_kind{identifier})
@@ -1443,7 +1451,7 @@ func (p *parser_s) parse_or_expression() Expression {
 
 	if !p.is_left_call(p.current_expression()) {
 		// if current expression is not a function call throw
-		p.throw(fmt.Sprintf(ErrorMessages["i_con"], "recover from a non-function expression"))
+		p.throw(fmt.Sprintf(errors.ErrorMessages["i_con"], "recover from a non-function expression"))
 	}
 
 	p.skip()
@@ -1471,7 +1479,7 @@ func (p *parser_s) parse_index_expression() Expression {
 	}
 
 	if p.is_left_fun(p.current_expression()) {
-		p.throw(fmt.Sprintf(ErrorMessages["i_con"], "index a function"))
+		p.throw(fmt.Sprintf(errors.ErrorMessages["i_con"], "index a function"))
 	}
 
 	p.must_expect([]token_kind{left_squre_bracks})
@@ -1642,7 +1650,7 @@ func (p *parser_s) parse_arithmetic_unary_expression() ArithmeticUnaryExpression
 	if reflect.TypeOf(expression) == reflect.TypeOf(CallExpression{}) {
 		p.backup()
 		defer p.advance()
-		p.throw(fmt.Sprintf(ErrorMessages["i_con"], "do this operation with a function call"))
+		p.throw(fmt.Sprintf(errors.ErrorMessages["i_con"], "do this operation with a function call"))
 	}
 
 	p.skip()
@@ -1865,7 +1873,7 @@ func (p *parser_s) parse_match_expression() Expression {
 	return p.continue_expression()
 }
 
-func Parse(input []byte, filepath string) (Ast, Error) {
+func Parse(input []byte, filepath string) (Ast, errors.Error) {
 	filename := path.Base(filepath)
 
 	parser := parser_s{

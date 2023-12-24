@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	errors "github.com/moonbite-org/moonbite/error"
 	parser "github.com/moonbite-org/moonbite/parser/cmd"
 )
 
@@ -13,13 +14,13 @@ func assert_identifier(t *testing.T, given parser.IdentifierExpression, expected
 	}
 }
 
-func assert_no_error(t *testing.T, err parser.Error) {
+func assert_no_error(t *testing.T, err errors.Error) {
 	if err.Exists {
 		t.Errorf("expected no error but got: %s", err)
 	}
 }
 
-func assert_error(t *testing.T, err parser.Error) {
+func assert_error(t *testing.T, err errors.Error) {
 	if !err.Exists {
 		t.Errorf("expected error but no error is present")
 	}
@@ -54,7 +55,7 @@ func assert_type(t *testing.T, given, expected any) {
 
 func TestToken(t *testing.T) {
 	token := parser.Token{
-		Location:   parser.Location{},
+		Location:   errors.Location{},
 		Literal:    "",
 		Raw:        "",
 		Offset:     0,
@@ -65,7 +66,7 @@ func TestToken(t *testing.T) {
 
 	token = parser.Token{
 		Kind:       parser.Whitespace,
-		Location:   parser.Location{},
+		Location:   errors.Location{},
 		Literal:    "",
 		Raw:        "",
 		Offset:     0,
@@ -76,7 +77,7 @@ func TestToken(t *testing.T) {
 
 	token = parser.Token{
 		Kind:       parser.Keyword,
-		Location:   parser.Location{},
+		Location:   errors.Location{},
 		Literal:    "as",
 		Raw:        "as",
 		Offset:     0,

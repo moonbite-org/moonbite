@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	errors "github.com/moonbite-org/moonbite/error"
 )
 
 func (p *parser_s) throw(reason string) {
-	var location Location
+	var location errors.Location
 	current := p.current_token()
 
 	if current.Kind == eof_token_kind {
@@ -15,16 +17,16 @@ func (p *parser_s) throw(reason string) {
 		last_line := len(split)
 		last_col := len(split[len(split)-1]) + 1
 
-		location = Location{
-			Start: Position{Line: last_line, Column: last_col},
-			End:   Position{Line: last_line, Column: last_col},
+		location = errors.Location{
+			Start: errors.Position{Line: last_line, Column: last_col},
+			End:   errors.Position{Line: last_line, Column: last_col},
 		}
 	} else {
 		location = current.Location
 	}
 
-	p.error = Error{
-		Kind:     SyntaxError,
+	p.error = errors.Error{
+		Kind:     errors.SyntaxError,
 		Reason:   reason,
 		Location: location,
 		Exists:   true,
@@ -105,12 +107,12 @@ func (p *parser_s) must_expect(tokens []token_kind) Token {
 	}
 
 	if p.current_token().Kind == eof_token_kind {
-		p.throw(fmt.Sprintf(ErrorMessages["u_eof"], strings.Join(expected, ", ")))
+		p.throw(fmt.Sprintf(errors.ErrorMessages["u_eof"], strings.Join(expected, ", ")))
 	} else {
 		if len(tokens) == 1 {
-			p.throw(fmt.Sprintf(ErrorMessages["u_tok_s"], token_map[tokens[0]], token_map[p.current_token().Kind]))
+			p.throw(fmt.Sprintf(errors.ErrorMessages["u_tok_s"], token_map[tokens[0]], token_map[p.current_token().Kind]))
 		} else {
-			p.throw(fmt.Sprintf(ErrorMessages["u_tok"], token_map[p.current_token().Kind]))
+			p.throw(fmt.Sprintf(errors.ErrorMessages["u_tok"], token_map[p.current_token().Kind]))
 		}
 	}
 	return eof_token
@@ -152,9 +154,9 @@ func (p *parser_s) might_only_expect(tokens []token_kind) *Token {
 
 	if p.current_token().Kind != eof_token_kind {
 		if len(tokens) == 1 {
-			p.throw(fmt.Sprintf(ErrorMessages["u_toks"], token_map[tokens[0]], token_map[p.current_token().Kind]))
+			p.throw(fmt.Sprintf(errors.ErrorMessages["u_toks"], token_map[tokens[0]], token_map[p.current_token().Kind]))
 		} else {
-			p.throw(fmt.Sprintf(ErrorMessages["u_tok"], token_map[p.current_token().Kind]))
+			p.throw(fmt.Sprintf(errors.ErrorMessages["u_tok"], token_map[p.current_token().Kind]))
 		}
 	}
 	return nil
@@ -214,7 +216,7 @@ func create_number_literal(p parser_s, literal string) NumberLiteral {
 	v, err := strconv.ParseFloat(literal, 32)
 
 	if err != nil {
-		p.throw(fmt.Sprintf(ErrorMessages["i_val"], err.Error()))
+		p.throw(fmt.Sprintf(errors.ErrorMessages["i_val"], err.Error()))
 	}
 
 	if strings.Contains(literal, ".") {
