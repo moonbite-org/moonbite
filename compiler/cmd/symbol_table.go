@@ -10,8 +10,9 @@ import (
 type SymbolScope string
 
 const (
-	GlobalScope SymbolScope = "scope:global"
-	LocalScope  SymbolScope = "scope:local"
+	BuiltinScope SymbolScope = "scope:builtin"
+	GlobalScope  SymbolScope = "scope:global"
+	LocalScope   SymbolScope = "scope:local"
 )
 
 type Symbol struct {
@@ -22,17 +23,25 @@ type Symbol struct {
 }
 
 type SymbolTable struct {
+	Outer *SymbolTable
+
 	store map[string]Symbol
 	count int
 }
 
-func (t *SymbolTable) Define(name string, kind parser.VarKind, scope SymbolScope) Symbol {
+func (t *SymbolTable) Define(name string, kind parser.VarKind) Symbol {
 	symbol := Symbol{
 		Name:  name,
-		Scope: scope,
 		Index: t.count,
 		Kind:  kind,
 	}
+
+	if t.Outer == nil {
+		symbol.Scope = GlobalScope
+	} else {
+		symbol.Scope = LocalScope
+	}
+
 	t.count++
 	t.store[name] = symbol
 
@@ -43,6 +52,10 @@ func (t SymbolTable) Resolve(name string) *Symbol {
 	symbol, ok := t.store[name]
 
 	if !ok {
+		if t.Outer != nil {
+			return t.Outer.Resolve(name)
+		}
+
 		return nil
 	}
 
@@ -61,5 +74,11 @@ func (t SymbolTable) String() string {
 
 func NewSymbolTable() *SymbolTable {
 	store := make(map[string]Symbol)
-	return &SymbolTable{store: store}
+	return &SymbolTable{store: store, Outer: nil}
+}
+
+func NewScopedSymbolTable(outer *SymbolTable) *SymbolTable {
+	table := NewSymbolTable()
+	table.Outer = outer
+	return table
 }

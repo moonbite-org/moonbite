@@ -10,24 +10,47 @@ import (
 type ObjectKind string
 
 const (
-	StringObjectKind ObjectKind = "object:string"
-	BoolObjectKind   ObjectKind = "object:bool"
-	Uint8ObjectKind  ObjectKind = "object:uint8"
-	Uint16ObjectKind ObjectKind = "object:uint16"
-	Uint32ObjectKind ObjectKind = "object:uint32"
-	Uint64ObjectKind ObjectKind = "object:uint64"
-	Int8ObjectKind   ObjectKind = "object:int8"
-	Int16ObjectKind  ObjectKind = "object:int16"
-	Int32ObjectKind  ObjectKind = "object:int32"
-	Int64ObjectKind  ObjectKind = "object:int64"
-	ListObjectKind   ObjectKind = "object:list"
-	MapObjectKind    ObjectKind = "object:map"
-	FunObjectKind    ObjectKind = "object:fun"
+	StringObjectKind  ObjectKind = "object:string"
+	BoolObjectKind    ObjectKind = "object:bool"
+	Uint8ObjectKind   ObjectKind = "object:uint8"
+	Uint16ObjectKind  ObjectKind = "object:uint16"
+	Uint32ObjectKind  ObjectKind = "object:uint32"
+	Uint64ObjectKind  ObjectKind = "object:uint64"
+	Int8ObjectKind    ObjectKind = "object:int8"
+	Int16ObjectKind   ObjectKind = "object:int16"
+	Int32ObjectKind   ObjectKind = "object:int32"
+	Int64ObjectKind   ObjectKind = "object:int64"
+	Float32ObjectKind ObjectKind = "object:float32"
+	Float64ObjectKind ObjectKind = "object:float64"
+	ListObjectKind    ObjectKind = "object:list"
+	MapObjectKind     ObjectKind = "object:map"
+	FunObjectKind     ObjectKind = "object:fun"
+	terminator_kind   ObjectKind = "object:terminator"
+	pool_block_kind   ObjectKind = "object:pool"
 )
+
+var type_map = map[ObjectKind]byte{
+	StringObjectKind: 12,
+	BoolObjectKind:   13,
+	Uint8ObjectKind:  15,
+	Uint16ObjectKind: 16,
+	Uint32ObjectKind: 17,
+	Uint64ObjectKind: 18,
+	Int8ObjectKind:   19,
+	Int16ObjectKind:  20,
+	Int32ObjectKind:  21,
+	Int64ObjectKind:  22,
+	ListObjectKind:   23,
+	MapObjectKind:    24,
+	FunObjectKind:    25,
+	pool_block_kind:  126,
+	terminator_kind:  0,
+}
 
 type Object interface {
 	Kind() ObjectKind
 	GetValue() interface{}
+	Serialize() []byte
 }
 
 type StringObject struct {
@@ -42,6 +65,14 @@ func (o StringObject) GetValue() interface{} {
 	return o.Value
 }
 
+func (o StringObject) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, []byte(o.Value)...)
+	result = append(result, type_map[terminator_kind])
+
+	return result
+}
+
 type BoolObject struct {
 	Value bool
 }
@@ -52,6 +83,18 @@ func (o BoolObject) Kind() ObjectKind {
 
 func (o BoolObject) GetValue() interface{} {
 	return o.Value
+}
+
+func (o BoolObject) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+
+	if o.Value {
+		result = append(result, 1)
+	} else {
+		result = append(result, 0)
+	}
+
+	return result
 }
 
 type Uint8Object struct {
@@ -66,6 +109,12 @@ func (o Uint8Object) GetValue() interface{} {
 	return o.Value
 }
 
+func (o Uint8Object) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, NumberToBytes(o.Value)...)
+	return result
+}
+
 type Uint16Object struct {
 	Value uint16
 }
@@ -76,6 +125,12 @@ func (o Uint16Object) Kind() ObjectKind {
 
 func (o Uint16Object) GetValue() interface{} {
 	return o.Value
+}
+
+func (o Uint16Object) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, NumberToBytes(o.Value)...)
+	return result
 }
 
 type Uint32Object struct {
@@ -90,6 +145,12 @@ func (o Uint32Object) GetValue() interface{} {
 	return o.Value
 }
 
+func (o Uint32Object) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, NumberToBytes(o.Value)...)
+	return result
+}
+
 type Uint64Object struct {
 	Value uint64
 }
@@ -100,6 +161,12 @@ func (o Uint64Object) Kind() ObjectKind {
 
 func (o Uint64Object) GetValue() interface{} {
 	return o.Value
+}
+
+func (o Uint64Object) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, NumberToBytes(o.Value)...)
+	return result
 }
 
 type Int8Object struct {
@@ -114,6 +181,12 @@ func (o Int8Object) GetValue() interface{} {
 	return o.Value
 }
 
+func (o Int8Object) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, NumberToBytes(o.Value)...)
+	return result
+}
+
 type Int16Object struct {
 	Value int16
 }
@@ -124,6 +197,12 @@ func (o Int16Object) Kind() ObjectKind {
 
 func (o Int16Object) GetValue() interface{} {
 	return o.Value
+}
+
+func (o Int16Object) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, NumberToBytes(o.Value)...)
+	return result
 }
 
 type Int32Object struct {
@@ -138,6 +217,12 @@ func (o Int32Object) GetValue() interface{} {
 	return o.Value
 }
 
+func (o Int32Object) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, NumberToBytes(o.Value)...)
+	return result
+}
+
 type Int64Object struct {
 	Value int64
 }
@@ -150,6 +235,48 @@ func (o Int64Object) GetValue() interface{} {
 	return o.Value
 }
 
+func (o Int64Object) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, NumberToBytes(o.Value)...)
+	return result
+}
+
+type Float32Object struct {
+	Value float32
+}
+
+func (o Float32Object) Kind() ObjectKind {
+	return Float32ObjectKind
+}
+
+func (o Float32Object) GetValue() interface{} {
+	return o.Value
+}
+
+func (o Float32Object) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, NumberToBytes(o.Value)...)
+	return result
+}
+
+type Float64Object struct {
+	Value float32
+}
+
+func (o Float64Object) Kind() ObjectKind {
+	return Float64ObjectKind
+}
+
+func (o Float64Object) GetValue() interface{} {
+	return o.Value
+}
+
+func (o Float64Object) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, NumberToBytes(o.Value)...)
+	return result
+}
+
 type ListObject struct {
 	Value []Object
 }
@@ -160,6 +287,18 @@ func (o ListObject) Kind() ObjectKind {
 
 func (o ListObject) GetValue() interface{} {
 	return o.Value
+}
+
+func (o ListObject) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+
+	for _, value := range o.Value {
+		result = append(result, value.Serialize()...)
+	}
+
+	result = append(result, type_map[terminator_kind])
+
+	return result
 }
 
 type MapObject struct {
@@ -177,6 +316,19 @@ func (o MapObject) GetValue() interface{} {
 	return o.Value
 }
 
+func (o MapObject) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+
+	for _, entry := range o.Value {
+		result = append(result, entry.Key.Serialize()...)
+		result = append(result, entry.Value.Serialize()...)
+	}
+
+	result = append(result, type_map[terminator_kind])
+
+	return result
+}
+
 type FunctionObject struct {
 	Value InstructionSet
 }
@@ -187,6 +339,14 @@ func (o FunctionObject) Kind() ObjectKind {
 
 func (o FunctionObject) GetValue() interface{} {
 	return o.Value
+}
+
+func (o FunctionObject) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	value := o.Value.GetBytes()
+	result = append(result, NumberToBytes(int32(len(value)))...)
+	result = append(result, value...)
+	return result
 }
 
 func ObjectFromLiteral(literal parser.LiteralExpression) Object {
@@ -222,6 +382,23 @@ func (p *ConstantPool) Add(value Object) int {
 
 func (p *ConstantPool) Get(index int) Object {
 	return p.Values[index]
+}
+
+func (p ConstantPool) Serialize() []byte {
+	result := []byte{type_map[pool_block_kind]}
+
+	for i, constant := range p.Values {
+		if constant == nil {
+			break
+		}
+
+		result = append(result, NumberToBytes(int32(i))...)
+		result = append(result, constant.Serialize()...)
+	}
+
+	result = append(result, type_map[terminator_kind])
+
+	return result
 }
 
 func (p ConstantPool) Has(value Object) int {

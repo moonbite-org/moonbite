@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	errors "github.com/moonbite-org/moonbite/error"
+	parser "github.com/moonbite-org/moonbite/parser/cmd"
 	"gopkg.in/yaml.v3"
 )
 
@@ -142,32 +143,34 @@ type Module struct {
 }
 
 func (m Module) Compile() errors.Error {
-	var multi_package_error *string
+	definitions := []parser.Definition{}
 
 	for _, file_path := range m.FilePaths {
-		if multi_package_error != nil {
-			break
+		program, err := os.ReadFile(file_path)
+		if err != nil {
+			return errors.CreateAnonError(errors.CompileError, err.Error())
 		}
-		compiler := new_file_compiler(file_path)
 
-		compiler.AddListener("announce:package", func(event Event[any]) {
-			name := event.Data.(string)
-			if len(m.PackageName) == 0 {
-				m.PackageName = name
-			} else {
-				if m.PackageName != name {
-					multi_package_error = &name
-				}
+		ast, p_err := parser.Parse(program, file_path)
+		if p_err.Exists {
+			return p_err
+		}
+
+		if len(m.PackageName) == 0 {
+			m.PackageName = ast.Package.Name.Value
+		} else {
+			if m.PackageName != ast.Package.Name.Value {
+				return errors.CreateCompileError(fmt.Sprintf("found multiple packages in this directory '%s', '%s' %s", ast.Package.Name.Value, m.PackageName, m.Dir), ast.Package.Location())
 			}
-		})
-
-		if err := compiler.Compile(); err.Exists {
-			return err
 		}
+
+		definitions = append(definitions, ast.Definitions...)
 	}
 
-	if multi_package_error != nil {
-		return errors.CreateAnonError(errors.CompileError, fmt.Sprintf("found multiple packages in this directory '%s', '%s' %s", *multi_package_error, m.PackageName, m.Dir))
+	compiler := NewPackageCompiler(definitions)
+
+	if err := compiler.Compile(); err.Exists {
+		return err
 	}
 
 	return errors.EmptyError

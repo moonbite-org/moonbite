@@ -1188,11 +1188,24 @@ func TestMisc(t *testing.T) {
 	fun for Test main() {
 		const some_value = T{ key: "value" }
 		this.offset += value.length()
-  	this.column += value.length()
+		this.column += value.length()
 	}
 	`)
 
 	_, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte(`package main
+
+	var message = "Hello, World"
+	
+	fun main() {
+		// var new_message = message + "!"
+		// print(new_message)
+	}`)
+
+	_, err = parser.Parse(input, "test.mb")
 
 	assert_no_error(t, err)
 }

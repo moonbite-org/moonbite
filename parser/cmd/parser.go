@@ -364,9 +364,11 @@ func (p *parser_s) parse_declaration_statement() DeclarationStatement {
 		p.skip()
 		v := p.parse_expression()
 
-		if v != nil {
-			value = &v
+		if v == nil {
+			p.must_expect([]token_kind{})
 		}
+
+		value = &v
 	}
 
 	p.skip()
@@ -1712,7 +1714,6 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			location: current.Location,
 		}
 		p.advance()
-		p.skip()
 	case rune_literal:
 		result = RuneLiteralExpression{
 			Value:    rune(current.Literal[0]),
@@ -1720,7 +1721,6 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			location: current.Location,
 		}
 		p.advance()
-		p.skip()
 	case bool_literal:
 		result = BoolLiteralExpression{
 			Value:    current.Literal == "true",
@@ -1728,7 +1728,6 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			location: current.Location,
 		}
 		p.advance()
-		p.skip()
 	case number_literal:
 		result = NumberLiteralExpression{
 			Value:    create_number_literal(*p, current.Literal),
@@ -1736,7 +1735,6 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			location: current.Location,
 		}
 		p.advance()
-		p.skip()
 	case left_squre_bracks:
 		values := parse_seperated_list(p, p.parse_expression, comma, left_squre_bracks, right_squre_bracks, true, false)
 

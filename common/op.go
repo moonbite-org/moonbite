@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"reflect"
@@ -14,9 +15,17 @@ const (
 	OpConstant
 	OpSet
 	OpGet
+	OpSetLocal
+	OpGetLocal
 	OpCall
 	OpPop
 	OpReturn
+	OpReturnEmpty
+	OpBreak
+	OpBreakEmpty
+	OpContinue
+	OpYield
+	OpIndex
 	OpTrue
 	OpFalse
 	OpJump
@@ -39,9 +48,17 @@ var op_map = map[Op]string{
 	OpConstant:           "Constant",
 	OpSet:                "Set",
 	OpGet:                "Get",
+	OpSetLocal:           "SetLocal",
+	OpGetLocal:           "GetLocal",
 	OpCall:               "Call",
 	OpPop:                "Pop",
 	OpReturn:             "Return",
+	OpReturnEmpty:        "ReturnEmpty",
+	OpBreak:              "Break",
+	OpBreakEmpty:         "BreakEmpty",
+	OpContinue:           "Continue",
+	OpYield:              "Yield",
+	OpIndex:              "Index",
 	OpTrue:               "True",
 	OpFalse:              "False",
 	OpJump:               "Jump",
@@ -67,16 +84,45 @@ func (op Op) String() string {
 	return fmt.Sprintf("%d", op)
 }
 
-func IntToBytes[T uint32 | uint64](value T) []byte {
+func NumberToBytes[T uint8 | uint16 | uint32 | uint64 | int8 | int16 | int32 | int64 | float32 | float64](value T) []byte {
 	var result []byte
 
 	switch reflect.TypeOf(value).Kind() {
+	case reflect.Uint8:
+		result = []byte{uint8(value)}
+	case reflect.Uint16:
+		result = make([]byte, 2)
+		binary.LittleEndian.PutUint16(result, uint16(value))
 	case reflect.Uint32:
 		result = make([]byte, 4)
 		binary.LittleEndian.PutUint32(result, uint32(value))
 	case reflect.Uint64:
-		result = make([]byte, 4)
+		result = make([]byte, 8)
 		binary.LittleEndian.PutUint64(result, uint64(value))
+	case reflect.Int8:
+		buffer := bytes.Buffer{}
+		binary.Write(&buffer, binary.LittleEndian, int8(value))
+		result = buffer.Bytes()
+	case reflect.Int16:
+		buffer := bytes.Buffer{}
+		binary.Write(&buffer, binary.LittleEndian, int16(value))
+		result = buffer.Bytes()
+	case reflect.Int32:
+		buffer := bytes.Buffer{}
+		binary.Write(&buffer, binary.LittleEndian, int32(value))
+		result = buffer.Bytes()
+	case reflect.Int64:
+		buffer := bytes.Buffer{}
+		binary.Write(&buffer, binary.LittleEndian, int64(value))
+		result = buffer.Bytes()
+	case reflect.Float32:
+		buffer := bytes.Buffer{}
+		binary.Write(&buffer, binary.LittleEndian, float32(value))
+		result = buffer.Bytes()
+	case reflect.Float64:
+		buffer := bytes.Buffer{}
+		binary.Write(&buffer, binary.LittleEndian, float64(value))
+		result = buffer.Bytes()
 	}
 
 	return result
@@ -103,10 +149,14 @@ func (i Instruction) GetBytes() []byte {
 	result = append(result, byte(i.Op))
 
 	for _, operand := range i.Operands {
-		result = append(result, IntToBytes(operand)...)
+		result = append(result, NumberToBytes(operand)...)
 	}
 
 	return result
+}
+
+func (i Instruction) GetSize() int {
+	return len(i.GetBytes())
 }
 
 func (i Instruction) String() string {
@@ -142,4 +192,8 @@ func (s InstructionSet) GetBytes() []byte {
 	}
 
 	return result
+}
+
+func (i InstructionSet) GetSize() int {
+	return len(i.GetBytes())
 }

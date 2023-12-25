@@ -2,38 +2,27 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/moonbite-org/moonbite/common"
 	errors "github.com/moonbite-org/moonbite/error"
 	parser "github.com/moonbite-org/moonbite/parser/cmd"
 )
 
-type FileCompiler struct {
+type PackageCompiler struct {
 	EventTarget
-	Path          string
-	SymbolTable   SymbolTable
-	ConstantPool  common.ConstantPool
-	Typechecker   DummyTypeChecker
-	Instructions  common.InstructionSet
-	current_scope SymbolScope
-	last_scope    SymbolScope
+	Definitions  []parser.Definition
+	SymbolTable  *SymbolTable
+	ConstantPool common.ConstantPool
+	Typechecker  DummyTypeChecker
+	Instructions common.InstructionSet
 }
 
-func (c FileCompiler) Compile() errors.Error {
-	program, err := os.ReadFile(c.Path)
-	if err != nil {
-		return errors.CreateAnonError(errors.CompileError, err.Error())
+func (c PackageCompiler) Compile() errors.Error {
+	for _, builtin := range common.Builtins {
+		c.SymbolTable.Define(builtin.Name, parser.ConstantKind)
 	}
 
-	ast, p_err := parser.Parse(program, c.Path)
-	if p_err.Exists {
-		return p_err
-	}
-
-	c.Dispatch("announce:package", ast.Package.Name.Value)
-
-	for _, definition := range ast.Definitions {
+	for _, definition := range c.Definitions {
 		instructions, err := c.compile_statement(definition)
 		if err.Exists {
 			return err
@@ -49,18 +38,20 @@ func (c FileCompiler) Compile() errors.Error {
 	return errors.EmptyError
 }
 
-func (c FileCompiler) GetBytes() []byte {
-	return c.Instructions.GetBytes()
+func (c PackageCompiler) GetBytes() []byte {
+	result := []byte{}
+	result = append(result, c.ConstantPool.Serialize()...)
+	result = append(result, c.Instructions.GetBytes()...)
+
+	return result
 }
 
-func new_file_compiler(path string) FileCompiler {
-	return FileCompiler{
-		Path:        path,
-		SymbolTable: *NewSymbolTable(),
+func NewPackageCompiler(definitions []parser.Definition) PackageCompiler {
+	return PackageCompiler{
+		Definitions: definitions,
+		SymbolTable: NewSymbolTable(),
 		ConstantPool: common.ConstantPool{
 			Values: [1024]common.Object{},
 		},
-		current_scope: GlobalScope,
-		last_scope:    GlobalScope,
 	}
 }
