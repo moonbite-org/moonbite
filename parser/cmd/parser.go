@@ -411,13 +411,14 @@ func (p *parser_s) parse_assignment_statement() AssignmentStatement {
 	rhs := p.parse_expression()
 
 	return AssignmentStatement{
+		Kind_: AssignmentStatementKind,
+
 		LeftHandSide:  lhs,
 		RightHandSide: rhs,
 		Operator: OperatorToken{
 			Literal:  operator.Literal,
 			location: operator.Location,
 		},
-		Kind_:    AssignmentStatementKind,
 		location: lhs.Location(),
 	}
 }

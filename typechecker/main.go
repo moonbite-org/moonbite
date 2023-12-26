@@ -319,7 +319,9 @@ func define_types(checker Typechecker) {
 				Name:     parser.IdentifierExpression{Value: "Uint64"},
 				Generics: map[int]parser.TypeLiteral{},
 			},
-			Operator: "|",
+			Operator: parser.OperatorToken{
+				Literal: "|",
+			},
 		},
 	}); err.Exists {
 		fmt.Println(err)

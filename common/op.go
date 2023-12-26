@@ -17,6 +17,9 @@ const (
 	OpGet
 	OpSetLocal
 	OpGetLocal
+	OpAssign
+	OpAssignLocal
+	OpSetItem
 	OpCall
 	OpPop
 	OpReturn
@@ -35,7 +38,10 @@ const (
 	OpMul
 	OpDiv
 	OpMod
+	OpAnd
+	OpOr
 	OpArray
+	OpMap
 	OpNegate
 	OpEqual
 	OpNotEqual
@@ -50,6 +56,9 @@ var op_map = map[Op]string{
 	OpGet:                "Get",
 	OpSetLocal:           "SetLocal",
 	OpGetLocal:           "GetLocal",
+	OpAssign:             "Assign",
+	OpAssignLocal:        "AssignLocal",
+	OpSetItem:            "SetItem",
 	OpCall:               "Call",
 	OpPop:                "Pop",
 	OpReturn:             "Return",
@@ -68,7 +77,10 @@ var op_map = map[Op]string{
 	OpMul:                "Mul",
 	OpDiv:                "Div",
 	OpMod:                "Mod",
+	OpAnd:                "And",
+	OpOr:                 "Or",
 	OpArray:              "Array",
+	OpMap:                "Map",
 	OpNegate:             "Negate",
 	OpEqual:              "Equal",
 	OpNotEqual:           "NotEqual",

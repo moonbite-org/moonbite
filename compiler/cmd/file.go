@@ -7,12 +7,13 @@ import (
 )
 
 type PackageCompiler struct {
-	IsRoot       bool
-	Definitions  []parser.Definition
-	SymbolTable  *SymbolTable
-	ConstantPool common.ConstantPool
-	Typechecker  DummyTypeChecker
-	Instructions common.InstructionSet
+	IsRoot               bool
+	Definitions          []parser.Definition
+	SymbolTable          *SymbolTable
+	ConstantPool         common.ConstantPool
+	Typechecker          DummyTypeChecker
+	Instructions         common.InstructionSet
+	current_match_target common.InstructionSet
 }
 
 func (c *PackageCompiler) Compile() errors.Error {

@@ -71,6 +71,18 @@ tasks:
   build-vm:
     cmds:
       - cd vm && go build -ldflags "-s -w" -o ../dist/mb && cd ..
+  # build-compiler-prod:
+  #   cmds:
+  #     - cd vm && GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ../dist/mb_osx_arm64 && cd ..
+  #     - cd vm && GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/mb_osx_amd64 && cd ..
+  #     - cd vm && GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o ../dist/mb_linux_arm64.elf && cd ..
+  #     - cd vm && GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/mb_linux_amd64.elf && cd ..
+  #     - cd vm && GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/mb_win.exe && cd ..
+  #     - cd vm && GOOS=js GOARCH=wasm go build -o ../dist/mb_js.wasm && cd ..
+  #     - cd vm && GOOS=wasip1 GOARCH=wasm go build -o ../dist/mb_wasi.wasm && cd ..
+  build-compiler:
+    cmds:
+      - cd compiler && go build -ldflags "-s -w" -o ../dist/moonc && cd ..
   zip:
     cmds:
       - for file in ./dist/*; do zip $file.zip $file && rm $file; done
