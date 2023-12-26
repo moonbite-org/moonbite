@@ -14,6 +14,7 @@ type PackageCompiler struct {
 	Typechecker          DummyTypeChecker
 	Instructions         common.InstructionSet
 	current_match_target common.InstructionSet
+	current_this_target  common.InstructionSet
 }
 
 func (c *PackageCompiler) Compile() errors.Error {

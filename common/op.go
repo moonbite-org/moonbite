@@ -47,6 +47,8 @@ const (
 	OpNotEqual
 	OpGreaterThan
 	OpGreaterThanOrEqual
+	OpInstanceof
+	OpExit
 )
 
 var op_map = map[Op]string{
@@ -86,6 +88,8 @@ var op_map = map[Op]string{
 	OpNotEqual:           "NotEqual",
 	OpGreaterThan:        "GreaterThan",
 	OpGreaterThanOrEqual: "GreaterThanOrEqual",
+	OpInstanceof:         "Instanceof",
+	OpExit:               "Exit",
 }
 
 func (op Op) String() string {

@@ -27,7 +27,12 @@ func (c *PackageCompiler) resolve_assignee(assignee parser.Expression) (*Symbol,
 
 	switch assignee.Kind() {
 	case parser.IdentifierExpressionKind:
-		symbol := c.SymbolTable.Resolve(assignee.(parser.IdentifierExpression).Value)
+		identifier := assignee.(parser.IdentifierExpression)
+		symbol := c.SymbolTable.Resolve(identifier.Value)
+
+		if symbol == nil {
+			return nil, errors.CreateCompileError(fmt.Sprintf("variable '%s' is not defined", identifier.Value), identifier.Location())
+		}
 
 		return symbol, errors.EmptyError
 	case parser.MemberExpressionKind:
@@ -462,6 +467,7 @@ func (c *PackageCompiler) compile_expression(expression parser.Expression, shoul
 		parser.MapLiteralExpressionKind,
 		parser.BoolLiteralExpressionKind,
 		parser.StringLiteralExpressionKind,
+		parser.RuneLiteralExpressionKind,
 		parser.ListLiteralExpressionKind:
 		result, err = c.compile_literal_expression(expression.(parser.LiteralExpression))
 	case parser.GroupExpressionKind:
@@ -470,6 +476,10 @@ func (c *PackageCompiler) compile_expression(expression parser.Expression, shoul
 		result, err = c.compile_identifier_expression(expression.(parser.IdentifierExpression))
 	case parser.ArithmeticExpressionKind:
 		result, err = c.compile_arithmetic_expression(expression.(parser.ArithmeticExpression))
+	case parser.NotExpressionKind:
+		result, err = c.compile_not_expression(expression.(parser.NotExpression))
+	case parser.GiveupExpressionKind:
+		result, err = c.compile_giveup_expression(expression.(parser.GiveupExpression))
 	case parser.ComparisonExpressionKind:
 		result, err = c.compile_comparison_expression(expression.(parser.ComparisonExpression))
 	case parser.BinaryExpressionKind:
@@ -482,6 +492,8 @@ func (c *PackageCompiler) compile_expression(expression parser.Expression, shoul
 		result, err = c.compile_call_expression(expression.(parser.CallExpression))
 	case parser.InstanceofExpressionKind:
 		result, err = c.compile_instanceof_expression(expression.(parser.InstanceofExpression))
+	case parser.ThisExpressionKind:
+		result, err = c.compile_this_expression(expression.(parser.ThisExpression))
 	case parser.MatchSelfExpressionKind:
 		result, err = c.compile_match_self_expression(expression.(parser.MatchSelfExpression))
 	case parser.MatchExpressionKind:
@@ -512,6 +524,13 @@ func (c *PackageCompiler) compile_literal_expression(expression parser.LiteralEx
 	case parser.StringLiteralKind:
 		value := expression.(parser.StringLiteralExpression).Value
 		index := c.ConstantPool.Add(common.StringObject{
+			Value: value,
+		})
+
+		result = append(result, common.NewInstruction(common.OpConstant, index))
+	case parser.RuneLiteralKind:
+		value := expression.(parser.RuneLiteralExpression).Value
+		index := c.ConstantPool.Add(common.RuneObject{
 			Value: value,
 		})
 
@@ -584,6 +603,28 @@ func (c *PackageCompiler) compile_arithmetic_expression(expression parser.Arithm
 	case "%":
 		result = append(result, common.NewInstruction(common.OpMod))
 	}
+
+	return result, errors.EmptyError
+}
+
+func (c *PackageCompiler) compile_not_expression(expression parser.NotExpression) (common.InstructionSet, errors.Error) {
+	result := common.InstructionSet{}
+
+	instructions, err := c.compile_expression(expression.Expression, false)
+	if err.Exists {
+		return result, err
+	}
+
+	result = append(result, instructions...)
+	result = append(result, common.NewInstruction(common.OpNegate))
+
+	return result, errors.EmptyError
+}
+
+func (c *PackageCompiler) compile_giveup_expression(expression parser.GiveupExpression) (common.InstructionSet, errors.Error) {
+	result := common.InstructionSet{}
+
+	result = append(result, common.NewInstruction(common.OpExit, 1))
 
 	return result, errors.EmptyError
 }
@@ -731,6 +772,14 @@ func (c *PackageCompiler) compile_instanceof_expression(expression parser.Instan
 	return c.compile_literal_expression(parser.BoolLiteralExpression{
 		Value: true,
 	})
+}
+
+func (c *PackageCompiler) compile_this_expression(expression parser.ThisExpression) (common.InstructionSet, errors.Error) {
+	if c.current_match_target == nil {
+		return common.InstructionSet{}, errors.CreateTypeError("this expressions are not allowed outside of bound functions", expression.Location())
+	}
+
+	return c.current_this_target, errors.EmptyError
 }
 
 func (c *PackageCompiler) compile_match_self_expression(expression parser.MatchSelfExpression) (common.InstructionSet, errors.Error) {

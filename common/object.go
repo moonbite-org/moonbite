@@ -11,6 +11,7 @@ type ObjectKind string
 
 const (
 	StringObjectKind  ObjectKind = "object:string"
+	RuneObjectKind    ObjectKind = "object:rune"
 	BoolObjectKind    ObjectKind = "object:bool"
 	Uint8ObjectKind   ObjectKind = "object:uint8"
 	Uint16ObjectKind  ObjectKind = "object:uint16"
@@ -68,6 +69,26 @@ func (o StringObject) GetValue() interface{} {
 func (o StringObject) Serialize() []byte {
 	result := []byte{type_map[o.Kind()]}
 	result = append(result, []byte(o.Value)...)
+	result = append(result, type_map[terminator_kind])
+
+	return result
+}
+
+type RuneObject struct {
+	Value rune
+}
+
+func (o RuneObject) Kind() ObjectKind {
+	return RuneObjectKind
+}
+
+func (o RuneObject) GetValue() interface{} {
+	return o.Value
+}
+
+func (o RuneObject) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+	result = append(result, []byte(string(o.Value))...)
 	result = append(result, type_map[terminator_kind])
 
 	return result

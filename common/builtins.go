@@ -1,6 +1,8 @@
 package common
 
-import "fmt"
+import (
+	"os"
+)
 
 type Builtin struct {
 	Fun func(args ...Object) Object
@@ -13,7 +15,13 @@ var Builtins = []struct {
 	{
 		Name: "print",
 		Builtin: &Builtin{func(args ...Object) Object {
-			fmt.Println("hi")
+			return nil
+		}},
+	},
+	{
+		Name: "exit",
+		Builtin: &Builtin{func(args ...Object) Object {
+			os.Exit(int(args[0].(Int32Object).Value))
 
 			return nil
 		}},
