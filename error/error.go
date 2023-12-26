@@ -7,7 +7,6 @@ type ErrorKind int
 const (
 	SyntaxError ErrorKind = iota
 	TypeError
-	FileError
 	CompileError
 )
 
@@ -21,7 +20,6 @@ var ErrorMessages = map[string]string{
 }
 
 var ErrorKindMap = map[ErrorKind]string{
-	FileError:    "File Error",
 	SyntaxError:  "Syntax Error",
 	TypeError:    "Type Error",
 	CompileError: "Compile Error",
@@ -40,11 +38,11 @@ type Location struct {
 }
 
 type Error struct {
-	Kind      ErrorKind
-	Reason    string
-	Location  Location
-	Exists    bool
-	Anonymous bool
+	Kind      ErrorKind `json:"kind"`
+	Reason    string    `json:"reason"`
+	Location  Location  `json:"location"`
+	Exists    bool      `json:"exists"`
+	Anonymous bool      `json:"anonymous"`
 }
 
 func (e Error) String() string {
