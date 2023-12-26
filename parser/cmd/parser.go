@@ -1931,7 +1931,7 @@ func (p *parser_s) parse_key_value_entry() KeyValueEntry {
 	value := p.parse_expression()
 
 	return KeyValueEntry{
-		Key:   p.create_ident(key),
+		Key:   *p.create_ident(key),
 		Value: value,
 	}
 }
@@ -1978,7 +1978,7 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 
 		for i, value := range values {
 			entries = append(entries, KeyValueEntry{
-				Key:   StringLiteralExpression{Value: fmt.Sprintf("%d", i)},
+				Key:   IdentifierExpression{Value: fmt.Sprintf("%d", i)},
 				Value: value,
 			})
 		}

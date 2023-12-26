@@ -949,8 +949,8 @@ func (e NumberLiteralExpression) Location() errors.Location {
 }
 
 type KeyValueEntry struct {
-	Key   Expression `json:"key"`
-	Value Expression `json:"value"`
+	Key   IdentifierExpression `json:"key"`
+	Value Expression           `json:"value"`
 }
 
 type ListLiteralExpression struct {
