@@ -18,17 +18,17 @@ type lexer struct {
 }
 
 var keywords = map[string]token_kind{
-	"as":         as_keyword,
-	"base":       base_keyword,
-	"break":      break_keyword,
-	"const":      const_keyword,
-	"continue":   continue_keyword,
-	"corout":     corout_keyword,
-	"else":       else_keyword,
-	"for":        for_keyword,
-	"fun":        fun_keyword,
-	"gen":        gen_keyword,
-	"giveup":     giveup_keyword,
+	"as":       as_keyword,
+	"base":     base_keyword,
+	"break":    break_keyword,
+	"const":    const_keyword,
+	"continue": continue_keyword,
+	"corout":   corout_keyword,
+	"else":     else_keyword,
+	"for":      for_keyword,
+	"fun":      fun_keyword,
+	"gen":      gen_keyword,
+	// "giveup":     giveup_keyword,
 	"hidden":     hidden_keyword,
 	"if":         if_keyword,
 	"implements": implements_keyword,
@@ -527,13 +527,43 @@ func (l *lexer) lex_alpha_numeric() {
 
 	literal := string(l.input[l.offset : l.offset+length])
 
-	if keywords[literal] != 0 {
-		l.register_token(l.create_token(keywords[literal], length))
-	} else if slices.Contains(bool_literals, literal) {
-		l.register_token(l.create_token(bool_literal, length))
-	} else if slices.Contains(cardinal_literals, literal) {
-		l.register_token(l.create_token(cardinal_literal, length))
+	register_keyword := func() {
+		if keywords[literal] != 0 {
+			l.register_token(l.create_token(keywords[literal], length))
+		} else if slices.Contains(bool_literals, literal) {
+			l.register_token(l.create_token(bool_literal, length))
+		} else if slices.Contains(cardinal_literals, literal) {
+			l.register_token(l.create_token(cardinal_literal, length))
+		} else {
+			l.register_token(l.create_token(identifier, length))
+		}
+	}
+
+	if literal == "give" {
+		l.advance_by(len(literal))
+
+		if l.current_rune() == ' ' {
+			length := 0
+			for unicode.IsDigit(l.next_rune()) || unicode.IsLetter(l.next_rune()) || l.next_rune() == '_' {
+				length++
+				l.advance()
+			}
+
+			l.backup_by(length - 1)
+			up_literal := string(l.input[l.offset : l.offset+length])
+
+			if up_literal == "up" {
+				l.backup_by(len(literal) + 1)
+				l.register_token(l.create_token(giveup_keyword, len(literal)+len(up_literal)+1))
+			} else {
+				l.backup_by(len(literal) + len(up_literal) + 1)
+				register_keyword()
+			}
+		} else {
+			l.backup_by(len(literal))
+			register_keyword()
+		}
 	} else {
-		l.register_token(l.create_token(identifier, length))
+		register_keyword()
 	}
 }

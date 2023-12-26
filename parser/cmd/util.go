@@ -35,9 +35,6 @@ func (p *parser_s) throw(reason string) {
 }
 
 func (p *parser_s) catch() {
-	// if r := recover(); r != nil {
-	// 	panic(r)
-	// }
 	recover()
 }
 
@@ -115,6 +112,11 @@ func (p *parser_s) must_expect(tokens []token_kind) Token {
 			p.throw(fmt.Sprintf(errors.ErrorMessages["u_tok"], token_map[p.current_token().Kind]))
 		}
 	}
+	return eof_token
+}
+
+func (p *parser_s) unexpected_token(message string) Token {
+	p.throw(fmt.Sprintf(errors.ErrorMessages["u_tok_m"], token_map[p.current_token().Kind], message))
 	return eof_token
 }
 

@@ -156,7 +156,7 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 	token := p.might_only_expect(allowed)
 
 	if token.Kind == hidden_keyword {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("Hidden keyword is only allwed in global scope.")
 	}
 
 	switch token.Kind {
@@ -278,7 +278,7 @@ func (p *parser_s) parse_if_statement() IfStatement {
 
 	main_block := p.parse_predicate_block()
 	if main_block.Predicate == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 	p.skip()
 
@@ -375,7 +375,7 @@ func (p *parser_s) parse_declaration_statement() DeclarationStatement {
 		v := p.parse_expression()
 
 		if v == nil {
-			p.must_expect([]token_kind{})
+			p.unexpected_token("")
 		}
 
 		value = &v
@@ -441,7 +441,7 @@ func (p *parser_s) parse_loop_predicate() LoopPredicate {
 		return p.parse_tripartite_loop_predicate()
 	default:
 		// there is something wrong with the token, just throw
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	return nil
@@ -453,7 +453,7 @@ func (p *parser_s) parse_unipartite_loop_predicate() UnipartiteLoopPredicate {
 	expression := p.parse_expression()
 
 	if expression == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	return UnipartiteLoopPredicate{
@@ -507,7 +507,7 @@ func (p *parser_s) parse_bipartite_loop_predicate() LoopPredicate {
 	iterator := p.parse_expression()
 
 	if iterator == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	result.Iterator = iterator
@@ -534,7 +534,7 @@ func (p *parser_s) parse_tripartite_loop_predicate() TripartiteLoopPredicate {
 	predicate := p.parse_expression()
 
 	if predicate == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 	result.Predicate = predicate
 	p.must_expect([]token_kind{semicolon})
@@ -666,7 +666,7 @@ func (p *parser_s) parse_type_identifier() TypeIdentifier {
 		expression := p.parse_type_expression()
 
 		if expression == nil {
-			p.must_expect([]token_kind{})
+			p.unexpected_token("")
 		} else {
 			name = expression
 		}
@@ -1161,7 +1161,7 @@ func (p *parser_s) parse_fun_definition_statement() FunDefinitionStatement {
 		}
 	default:
 		// there is something wrong with the token, just throw
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	p.skip()
@@ -1268,7 +1268,7 @@ func (p *parser_s) is_left_callable(expression Expression) bool {
 	}
 
 	switch reflect.TypeOf(expression) {
-	case reflect.TypeOf(IdentifierExpression{}), reflect.TypeOf(MemberExpression{}):
+	case reflect.TypeOf(IdentifierExpression{}), reflect.TypeOf(MemberExpression{}), reflect.TypeOf(IndexExpression{}):
 		return true
 	case reflect.TypeOf(GroupExpression{}):
 		return p.is_left_callable(expression.(GroupExpression).Expression)
@@ -1350,7 +1350,7 @@ func (p *parser_s) continue_expression() Expression {
 		if !p.is_this_context {
 			p.backup_by(2)
 			defer p.advance()
-			p.must_expect([]token_kind{})
+			p.unexpected_token("")
 		}
 		p.set_current_expression(ThisExpression{location: p.current_token().Location, Kind_: ThisExpressionKind})
 		p.advance()
@@ -1373,7 +1373,7 @@ func (p *parser_s) continue_expression() Expression {
 			if !p.is_match_context {
 				p.backup_by(2)
 				defer p.advance()
-				p.must_expect([]token_kind{})
+				p.unexpected_token("")
 			}
 			p.backup()
 			p.set_current_expression(MatchSelfExpression{location: p.current_token().Location, Kind_: MatchSelfExpressionKind})
@@ -1405,7 +1405,7 @@ func (p *parser_s) continue_expression() Expression {
 		return p.parse_anonymous_fun_expression(function_context)
 	case giveup_keyword:
 		if p.current_expression() != nil {
-			p.must_expect([]token_kind{})
+			p.unexpected_token("")
 		}
 		p.advance()
 		p.set_current_expression(GiveupExpression{location: p.current_token().Location, Kind_: GiveupExpressionKind})
@@ -1413,7 +1413,7 @@ func (p *parser_s) continue_expression() Expression {
 		return exit()
 	case caret:
 		if p.current_expression() != nil {
-			p.must_expect([]token_kind{})
+			p.unexpected_token("")
 		}
 		p.advance()
 		p.set_current_expression(CaretExpression{location: p.current_token().Location, Kind_: CaretExpressionKind})
@@ -1422,7 +1422,7 @@ func (p *parser_s) continue_expression() Expression {
 		return p.parse_or_expression()
 	case cardinal_literal:
 		defer p.advance()
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 		return nil
 	case left_squre_bracks:
 		if p.current_expression() == nil {
@@ -1467,7 +1467,7 @@ func (p *parser_s) parse_expression() Expression {
 
 func (p *parser_s) parse_anonymous_fun_expression(context []token_kind) Expression {
 	if p.current_expression() != nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	signature := p.parse_anonymous_fun_signature()
@@ -1488,7 +1488,7 @@ func (p *parser_s) parse_anonymous_fun_expression(context []token_kind) Expressi
 
 func (p *parser_s) parse_corout_expression() Expression {
 	if p.current_expression() != nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	start := p.must_expect([]token_kind{corout_keyword})
@@ -1507,7 +1507,7 @@ func (p *parser_s) parse_corout_expression() Expression {
 
 func (p *parser_s) parse_gen_expression() Expression {
 	if p.current_expression() != nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	start := p.must_expect([]token_kind{gen_keyword})
@@ -1532,7 +1532,7 @@ func (p *parser_s) parse_group_expression() Expression {
 	expression := p.parse_expression()
 
 	if expression == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	p.skip()
@@ -1625,7 +1625,7 @@ func (p *parser_s) parse_index_expression() Expression {
 	defer p.catch()
 
 	if p.current_expression() == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	if p.is_left_fun(p.current_expression()) {
@@ -1635,7 +1635,7 @@ func (p *parser_s) parse_index_expression() Expression {
 	p.must_expect([]token_kind{left_squre_bracks})
 	index := p.parse_expression()
 	if index == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 	p.must_expect([]token_kind{right_squre_bracks})
 
@@ -1654,7 +1654,7 @@ func (p *parser_s) parse_arithmetic_expression() Expression {
 
 	current := p.current_expression()
 	if current == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	operator := p.must_expect([]token_kind{plus, minus, star, forward_slash, percent})
@@ -1711,7 +1711,7 @@ func (p *parser_s) parse_comparison_expression() Expression {
 	start_offset := p.offset
 	current := p.current_expression()
 	if current == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	operator := p.must_expect([]token_kind{left_angle_bracks, right_angle_bracks, comparison_operator})
@@ -1721,7 +1721,7 @@ func (p *parser_s) parse_comparison_expression() Expression {
 
 	if rhs == nil {
 		p.backup_by(skipped)
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	/* normally an expression like var0 < var1 > var2 is not acceptable
@@ -1745,10 +1745,10 @@ func (p *parser_s) parse_comparison_expression() Expression {
 			typ := p.parse_type_literal()
 
 			if typ == nil {
-				p.must_expect([]token_kind{})
+				p.unexpected_token("")
 			}
 			if typ.TypeKind() != TypeIdentifierKind {
-				p.must_expect([]token_kind{})
+				p.unexpected_token("")
 			}
 
 			value := right_comparison.RightHandSide.(MapLiteralExpression).Value
@@ -1767,7 +1767,7 @@ func (p *parser_s) parse_comparison_expression() Expression {
 		current_offset := p.current_token().Location.Offset
 		skipped_offset := right_comparison.Operator.location.Offset
 		p.backup_by(current_offset - skipped_offset)
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	p.set_current_expression(ComparisonExpression{
@@ -1790,7 +1790,7 @@ func (p *parser_s) parse_binary_expression() Expression {
 
 	current := p.current_expression()
 	if current == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	operator := p.must_expect([]token_kind{binary_operator})
@@ -1800,7 +1800,7 @@ func (p *parser_s) parse_binary_expression() Expression {
 
 	if rhs == nil {
 		p.backup_by(skipped)
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	p.set_current_expression(BinaryExpression{
@@ -1822,7 +1822,7 @@ func (p *parser_s) parse_not_expression() Expression {
 
 	current := p.current_expression()
 	if current != nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	start := p.must_expect([]token_kind{exclamation})
@@ -1832,7 +1832,7 @@ func (p *parser_s) parse_not_expression() Expression {
 
 	if expr == nil {
 		p.backup_by(skipped)
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	p.set_current_expression(NotExpression{
@@ -1849,7 +1849,7 @@ func (p *parser_s) parse_instanceof_expression() Expression {
 
 	current := p.current_expression()
 	if current == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	p.must_expect([]token_kind{instanceof_keyword})
@@ -1874,7 +1874,7 @@ func (p *parser_s) parse_arithmetic_unary_expression() ArithmeticUnaryExpression
 	var expression Expression
 
 	if p.current_expression() == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	expression = p.current_expression()
@@ -1907,7 +1907,7 @@ func (p *parser_s) parse_type_cast_expression() Expression {
 	defer p.catch()
 
 	if p.current_expression() == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	p.must_expect([]token_kind{left_parens})
@@ -2008,7 +2008,7 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			}
 		} else {
 			if reflect.TypeOf(current) != reflect.TypeOf(IdentifierExpression{}) && reflect.TypeOf(current) != reflect.TypeOf(MemberExpression{}) {
-				p.must_expect([]token_kind{})
+				p.unexpected_token("")
 			}
 
 			typ := TypeIdentifier{
@@ -2072,7 +2072,7 @@ func (p *parser_s) parse_match_expression() Expression {
 	against := p.parse_expression()
 
 	if against == nil {
-		p.must_expect([]token_kind{})
+		p.unexpected_token("")
 	}
 
 	p.must_expect([]token_kind{right_parens})

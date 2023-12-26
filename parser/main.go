@@ -38,7 +38,7 @@ func main() {
 		}
 
 		var err error
-		input, err = base64.RawStdEncoding.DecodeString(os.Args[1])
+		input, err = base64.StdEncoding.DecodeString(os.Args[1])
 		if err != nil {
 			os.Stderr.WriteString(err.Error())
 			os.Exit(1)

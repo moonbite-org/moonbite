@@ -1135,7 +1135,7 @@ func TestFunExpression(t *testing.T) {
 func TestOrExpression(t *testing.T) {
 	input := []byte(`package main
 	const test = read_file() or 0
-	const test = read_file() or giveup
+	const test = read_file() or give up
 	`)
 	ast, err := parser.Parse(input, "test.mb")
 
@@ -1168,6 +1168,13 @@ func TestOrExpression(t *testing.T) {
 
 	input = []byte(`package main
 	const test = 2 + 2 or 0
+	`)
+	ast, err = parser.Parse(input, "test.mb")
+
+	assert_error(t, err)
+
+	input = []byte(`package main
+	give up
 	`)
 	ast, err = parser.Parse(input, "test.mb")
 
