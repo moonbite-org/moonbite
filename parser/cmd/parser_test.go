@@ -1015,7 +1015,7 @@ func TestArithmeticUnaryExpression(t *testing.T) {
 }
 
 func TestFunExpression(t *testing.T) {
-	input := []byte(`package main 
+	input := []byte(`package main
 	const test = fun() {
 
 	}
@@ -1030,7 +1030,7 @@ func TestFunExpression(t *testing.T) {
 	decl := definition.(parser.DeclarationStatement)
 	assert_type(t, *decl.Value, parser.AnonymousFunExpression{})
 
-	input = []byte(`package main 
+	input = []byte(`package main
 	const test = fun<T, K>() {
 
 	}
@@ -1053,7 +1053,7 @@ func TestFunExpression(t *testing.T) {
 	assert_type(t, generics["K"].Name, parser.IdentifierExpression{})
 	assert_string(t, generics["K"].Name.Value, "K")
 
-	input = []byte(`package main 
+	input = []byte(`package main
 	const test = fun(data Int) String {
 		var count = data
 		count++
@@ -1077,40 +1077,47 @@ func TestFunExpression(t *testing.T) {
 	assert_type(t, *expression.Signature.ReturnType, parser.TypeIdentifier{})
 	assert_string(t, (*expression.Signature.ReturnType).(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "String")
 
-	input = []byte(`package main 
+	input = []byte(`package main
 	const test = fun(data Int) String {
 	`)
 	ast, err = parser.Parse(input, "test.mb")
 
 	assert_error(t, err)
 
-	input = []byte(`package main 
+	input = []byte(`package main
 	const test = fun(data) String {}
 	`)
 	ast, err = parser.Parse(input, "test.mb")
 
 	assert_error(t, err)
 
-	input = []byte(`package main 
+	input = []byte(`package main
 	const test = fun( String {}
 	`)
 	ast, err = parser.Parse(input, "test.mb")
 
 	assert_error(t, err)
 
-	input = []byte(`package main 
+	input = []byte(`package main
 	const test = fun(): String {}
 	`)
 	ast, err = parser.Parse(input, "test.mb")
 
 	assert_error(t, err)
 
-	input = []byte(`package main 
+	input = []byte(`package main
 	const test = fun()
 	`)
 	ast, err = parser.Parse(input, "test.mb")
 
 	assert_error(t, err)
+
+	input = []byte(`package main 
+	const test = fun() http.Response {}
+	`)
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
 }
 
 func TestOrExpression(t *testing.T) {
@@ -1205,6 +1212,49 @@ func TestCoroutFun(t *testing.T) {
 
 	assert_type(t, expression, parser.CoroutFunExpression{})
 	assert_type(t, expression.(parser.CoroutFunExpression).Fun, parser.AnonymousFunExpression{})
+
+	input = []byte(`package main
+	fun main() {
+		const c = corout fun() Int {
+			print(message)
+			return 0
+		}
+	}
+	`)
+
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte(`package main
+	fun main() {
+		const c = corout fun() http.Response {
+			return http.get(url)
+		}
+		c.start()
+
+		const res = c.release()
+	}
+	`)
+
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	// input = []byte(`package main
+	// fun main() {
+	// 	const req = corout fun() http.Response {
+	// 		return http.get("http://example.com")
+	// 	}
+	// 	req.start()
+
+	// 	const res = req.release()
+	// }
+	// `)
+
+	// _, err = parser.Parse(input, "test.mb")
+
+	// assert_no_error(t, err)
 }
 
 func TestGenFun(t *testing.T) {
@@ -1261,6 +1311,20 @@ func TestMisc(t *testing.T) {
 
 	var data = {
 		key: "value"
+	}
+`)
+
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte(`package main
+	fun main() {
+		var iterator = gen fun() Int {
+			for (var i = 0; i < 10; i++) {
+			 	yield i
+			}
+		}
 	}
 `)
 

@@ -9,20 +9,22 @@ import (
 )
 
 // extra allowed keywords inside code blocks
-var function_context = []token_kind{return_keyword, yield_keyword}
-var loop_context = []token_kind{return_keyword, break_keyword, continue_keyword}
-var predicate_body_context = []token_kind{return_keyword}
+var generator_function_context = []token_kind{return_keyword, yield_keyword}
+var function_context = []token_kind{return_keyword}
+var loop_context = []token_kind{break_keyword, continue_keyword}
+var predicate_body_context = []token_kind{}
 
 type parser_s struct {
-	input            []byte
-	offset           int
-	tokens           []Token
-	error            errors.Error
-	ast              Ast
-	expressions      []Expression
-	is_match_context bool
-	is_this_context  bool
-	body_context     []token_kind
+	input                 []byte
+	offset                int
+	tokens                []Token
+	error                 errors.Error
+	ast                   Ast
+	expressions           []Expression
+	is_match_context      bool
+	is_this_context       bool
+	body_context          []token_kind
+	previous_body_context []token_kind
 }
 
 type TopLevelResult struct {
@@ -58,6 +60,15 @@ func (p *parser_s) pop_expression() {
 
 func (p *parser_s) push_expression() {
 	p.expressions = append(p.expressions, nil)
+}
+
+func (p *parser_s) set_context(context []token_kind) {
+	p.previous_body_context = p.body_context
+	p.body_context = append(p.body_context, context...)
+}
+
+func (p *parser_s) reset_context() {
+	p.body_context = p.previous_body_context
 }
 
 func (p *parser_s) parse_program() {
@@ -299,10 +310,9 @@ func (p *parser_s) parse_if_statement() IfStatement {
 
 	if is_else != nil {
 		p.skip()
-		last := p.body_context
-		p.body_context = predicate_body_context
+		p.set_context(predicate_body_context)
 		else_block = p.parse_block()
-		p.body_context = last
+		p.reset_context()
 	}
 
 	return IfStatement{
@@ -551,10 +561,9 @@ func (p *parser_s) parse_loop_statement() LoopStatement {
 	result.Predicate = p.parse_loop_predicate()
 	p.must_expect([]token_kind{right_parens})
 	p.skip()
-	last := p.body_context
-	p.body_context = loop_context
+	p.set_context(loop_context)
 	result.Body = p.parse_block()
-	p.body_context = last
+	p.reset_context()
 
 	return result
 }
@@ -641,6 +650,44 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 func (p *parser_s) parse_type_identifier() TypeIdentifier {
 	defer p.catch()
 
+	var name Expression
+	is_cardinal := p.might_expect([]token_kind{cardinal_literal})
+
+	if is_cardinal != nil {
+		name = *p.create_ident(*is_cardinal)
+	} else {
+		expression := p.parse_type_expression()
+		if expression != nil {
+			name = expression
+		} else {
+			p.must_expect([]token_kind{})
+		}
+	}
+
+	result := TypeIdentifier{
+		TypeKind_: TypeIdentifierKind,
+		Name:      name,
+		Generics:  map[int]TypeLiteral{},
+		location:  name.Location(),
+	}
+
+	is_generic := p.might_expect([]token_kind{left_angle_bracks})
+
+	if is_generic != nil {
+		p.backup()
+		generics := parse_seperated_list(p, p.parse_type_literal, comma, left_angle_bracks, right_angle_bracks, false, false)
+
+		for i, generic := range generics {
+			result.Generics[i] = generic
+		}
+	}
+
+	return result
+}
+
+func (p *parser_s) parse_simple_type_identifier() TypeIdentifier {
+	defer p.catch()
+
 	name := p.must_expect([]token_kind{identifier, cardinal_literal})
 
 	result := TypeIdentifier{
@@ -662,6 +709,70 @@ func (p *parser_s) parse_type_identifier() TypeIdentifier {
 	}
 
 	return result
+}
+
+func (p *parser_s) continue_type_expression() Expression {
+	defer p.catch()
+
+	exit := func() Expression {
+		p.skip()
+		result := p.current_expression()
+		p.pop_expression()
+		return result
+	}
+
+	switch p.current_token().Kind {
+	case identifier:
+		if p.current_expression() != nil {
+			p.backup()
+			return p.current_expression()
+		}
+		ident := p.create_ident(p.current_token())
+		p.advance()
+		p.set_current_expression(*ident)
+		return p.continue_type_expression()
+	case dot:
+		p.advance()
+
+		if p.current_expression() == nil {
+			// If there is no left hand side, it could just be a match self expression
+			if p.is_match_context {
+				p.set_current_expression(MatchSelfExpression{location: p.current_token().Location, Kind_: MatchSelfExpressionKind})
+			} else {
+				p.backup()
+			}
+		}
+
+		if p.is_left_fun(p.current_expression()) {
+			p.throw(fmt.Sprintf(errors.ErrorMessages["i_con"], "read a value off of a function"))
+		}
+
+		rhs_t := p.must_expect([]token_kind{identifier})
+		rhs := p.create_ident(rhs_t)
+
+		p.set_current_expression(MemberExpression{
+			LeftHandSide:  p.current_expression(),
+			RightHandSide: *rhs,
+			Kind_:         MemberExpressionKind,
+			location:      p.current_expression().Location(),
+		})
+
+		return p.continue_type_expression()
+	case new_line, whitespace:
+		return exit()
+	default:
+		return exit()
+	}
+}
+
+func (p *parser_s) parse_type_expression() Expression {
+	defer p.catch()
+
+	if p.current_expression() != nil {
+		p.push_expression()
+	}
+
+	return p.continue_type_expression()
 }
 
 func (p *parser_s) parse_value_type_pair() ValueTypePair {
@@ -917,7 +1028,7 @@ func (p *parser_s) parse_anonymous_fun_signature() AnonymousFunctionSignature {
 
 	var return_type *TypeLiteral
 	p.skip()
-	return_type_t := p.might_expect([]token_kind{identifier, cardinal_literal})
+	return_type_t := p.might_expect([]token_kind{identifier, cardinal_literal, fun_keyword, left_parens})
 
 	if return_type_t != nil {
 		p.backup()
@@ -945,7 +1056,7 @@ func (p *parser_s) parse_bound_fun_signature() BoundFunctionSignature {
 	p.must_expect([]token_kind{for_keyword})
 	p.must_expect([]token_kind{whitespace, new_line})
 	p.skip()
-	for_typ := p.parse_type_identifier()
+	for_typ := p.parse_simple_type_identifier()
 	p.must_expect([]token_kind{whitespace, new_line})
 	p.skip()
 	name := p.must_expect([]token_kind{identifier})
@@ -1049,10 +1160,9 @@ func (p *parser_s) parse_fun_definition_statement() FunDefinitionStatement {
 	if reflect.TypeOf(definition) == reflect.TypeOf(&BoundFunDefinitionStatement{}) {
 		p.is_this_context = true
 	}
-	last := p.body_context
-	p.body_context = function_context
+	p.set_context(function_context)
 	definition.set_body(p.parse_block())
-	p.body_context = last
+	p.reset_context()
 	p.is_this_context = false
 
 	return definition
@@ -1072,8 +1182,9 @@ func (p *parser_s) parse_return_statement() ReturnStatement {
 	p.parse_inline_level_statements()
 
 	return ReturnStatement{
+		Kind_: ReturnStatementKind,
+
 		Value:    &expression,
-		Kind_:    ReturnStatementKind,
 		location: start.Location,
 	}
 }
@@ -1092,7 +1203,8 @@ func (p *parser_s) parse_yield_statement() YieldStatement {
 	p.parse_inline_level_statements()
 
 	return YieldStatement{
-		Kind_:    YieldStatementKind,
+		Kind_: YieldStatementKind,
+
 		Value:    &expression,
 		location: start.Location,
 	}
@@ -1291,7 +1403,7 @@ func (p *parser_s) continue_expression() Expression {
 	case exclamation:
 		return p.parse_not_expression()
 	case fun_keyword:
-		return p.parse_anonymous_fun_expression()
+		return p.parse_anonymous_fun_expression(function_context)
 	case giveup_keyword:
 		if p.current_expression() != nil {
 			p.must_expect([]token_kind{})
@@ -1354,7 +1466,7 @@ func (p *parser_s) parse_expression() Expression {
 	return p.continue_expression()
 }
 
-func (p *parser_s) parse_anonymous_fun_expression() Expression {
+func (p *parser_s) parse_anonymous_fun_expression(context []token_kind) Expression {
 	if p.current_expression() != nil {
 		p.must_expect([]token_kind{})
 	}
@@ -1366,10 +1478,9 @@ func (p *parser_s) parse_anonymous_fun_expression() Expression {
 		location:  signature.location,
 	}
 	p.skip()
-	last := p.body_context
-	p.body_context = function_context
+	p.set_context(context)
 	result.Body = p.parse_block()
-	p.body_context = last
+	p.reset_context()
 
 	p.set_current_expression(result)
 
@@ -1383,7 +1494,7 @@ func (p *parser_s) parse_corout_expression() Expression {
 
 	start := p.must_expect([]token_kind{corout_keyword})
 	p.skip()
-	fun := p.parse_anonymous_fun_expression()
+	fun := p.parse_anonymous_fun_expression(function_context)
 
 	p.set_current_expression(CoroutFunExpression{
 		Kind_: CoroutFunExpressionKind,
@@ -1402,7 +1513,7 @@ func (p *parser_s) parse_gen_expression() Expression {
 
 	start := p.must_expect([]token_kind{gen_keyword})
 	p.skip()
-	fun := p.parse_anonymous_fun_expression()
+	fun := p.parse_anonymous_fun_expression(generator_function_context)
 
 	p.set_current_expression(GenFunExpression{
 		Kind_: GenFunExpressionKind,
@@ -1854,10 +1965,9 @@ func (p *parser_s) parse_predicate_block() PredicateBlock {
 	p.must_expect([]token_kind{right_parens})
 
 	p.skip()
-	last := p.body_context
-	p.body_context = predicate_body_context
+	p.set_context(predicate_body_context)
 	body := p.parse_block()
-	p.body_context = last
+	p.reset_context()
 
 	return PredicateBlock{
 		Predicate: predicate,
