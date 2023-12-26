@@ -135,7 +135,7 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 	p.skip()
 	result := StatementList{}
 
-	allowed := []token_kind{var_keyword, const_keyword, for_keyword, match_keyword, if_keyword, identifier, right_curly_bracks, single_line_comment, multi_line_comment, hidden_keyword}
+	allowed := []token_kind{var_keyword, const_keyword, for_keyword, match_keyword, if_keyword, identifier, right_curly_bracks, single_line_comment, multi_line_comment, hidden_keyword, corout_keyword, gen_keyword}
 	allowed = append(allowed, p.body_context...)
 
 	if p.is_this_context {
@@ -1185,6 +1185,13 @@ set this as the current expression and will try to move forward by calling conti
 func (p *parser_s) continue_expression() Expression {
 	defer p.catch()
 
+	exit := func() Expression {
+		p.skip()
+		result := p.current_expression()
+		p.pop_expression()
+		return result
+	}
+
 	switch p.current_token().Kind {
 	case rune_literal, string_literal, bool_literal, number_literal:
 		p.set_current_expression(p.parse_literal_expression())
@@ -1192,7 +1199,19 @@ func (p *parser_s) continue_expression() Expression {
 		is_ended := p.might_expect([]token_kind{new_line})
 
 		if is_ended != nil {
-			return p.current_expression()
+			p.skip()
+			result := p.current_expression()
+			p.pop_expression()
+			return result
+		}
+		return p.continue_expression()
+	case left_curly_bracks:
+		p.set_current_expression(p.parse_literal_expression())
+
+		is_ended := p.might_expect([]token_kind{new_line, whitespace})
+
+		if is_ended != nil {
+			return exit()
 		}
 		return p.continue_expression()
 	case identifier:
@@ -1214,6 +1233,10 @@ func (p *parser_s) continue_expression() Expression {
 		p.set_current_expression(ThisExpression{location: p.current_token().Location, Kind_: ThisExpressionKind})
 		p.advance()
 		return p.continue_expression()
+	case corout_keyword:
+		return p.parse_corout_expression()
+	case gen_keyword:
+		return p.parse_gen_expression()
 	case dot:
 		p.advance()
 
@@ -1241,21 +1264,6 @@ func (p *parser_s) continue_expression() Expression {
 		} else {
 			return p.parse_call_expression()
 		}
-	case left_curly_bracks:
-		current := p.current_expression()
-
-		if reflect.TypeOf(current) != reflect.TypeOf(IdentifierExpression{}) && reflect.TypeOf(current) != reflect.TypeOf(MemberExpression{}) {
-			p.must_expect([]token_kind{})
-		}
-
-		p.set_current_expression(p.parse_literal_expression())
-		is_ended := p.might_expect([]token_kind{new_line, whitespace})
-
-		if is_ended != nil {
-			return p.current_expression()
-		}
-
-		return p.continue_expression()
 	case left_angle_bracks, right_angle_bracks, binary_operator:
 		return p.parse_binary_expression()
 	// parsing typed struct literals like Slice<Int>{} are a problem
@@ -1291,10 +1299,7 @@ func (p *parser_s) continue_expression() Expression {
 		p.advance()
 		p.set_current_expression(GiveupExpression{location: p.current_token().Location, Kind_: GiveupExpressionKind})
 
-		result := p.current_expression()
-		p.pop_expression()
-
-		return result
+		return exit()
 	case caret:
 		if p.current_expression() != nil {
 			p.must_expect([]token_kind{})
@@ -1311,11 +1316,12 @@ func (p *parser_s) continue_expression() Expression {
 	case left_squre_bracks:
 		if p.current_expression() == nil {
 			p.set_current_expression(p.parse_literal_expression())
-			is_ended := p.might_expect([]token_kind{new_line})
+			is_ended := p.might_expect([]token_kind{new_line, whitespace})
 
 			if is_ended != nil {
-				return p.current_expression()
+				return exit()
 			}
+
 			return p.continue_expression()
 		} else {
 			return p.parse_index_expression()
@@ -1332,15 +1338,9 @@ func (p *parser_s) continue_expression() Expression {
 			return p.continue_expression()
 		}
 	case new_line:
-		result := p.current_expression()
-		p.pop_expression()
-
-		return result
+		return exit()
 	default:
-		result := p.current_expression()
-		p.pop_expression()
-
-		return result
+		return exit()
 	}
 }
 
@@ -1372,6 +1372,44 @@ func (p *parser_s) parse_anonymous_fun_expression() Expression {
 	p.body_context = last
 
 	p.set_current_expression(result)
+
+	return p.continue_expression()
+}
+
+func (p *parser_s) parse_corout_expression() Expression {
+	if p.current_expression() != nil {
+		p.must_expect([]token_kind{})
+	}
+
+	start := p.must_expect([]token_kind{corout_keyword})
+	p.skip()
+	fun := p.parse_anonymous_fun_expression()
+
+	p.set_current_expression(CoroutFunExpression{
+		Kind_: CoroutFunExpressionKind,
+
+		Fun:      fun.(AnonymousFunExpression),
+		location: start.Location,
+	})
+
+	return p.continue_expression()
+}
+
+func (p *parser_s) parse_gen_expression() Expression {
+	if p.current_expression() != nil {
+		p.must_expect([]token_kind{})
+	}
+
+	start := p.must_expect([]token_kind{gen_keyword})
+	p.skip()
+	fun := p.parse_anonymous_fun_expression()
+
+	p.set_current_expression(GenFunExpression{
+		Kind_: GenFunExpressionKind,
+
+		Fun:      fun.(AnonymousFunExpression),
+		location: start.Location,
+	})
 
 	return p.continue_expression()
 }
@@ -1758,17 +1796,34 @@ func (p *parser_s) parse_literal_expression() LiteralExpression {
 			p.advance()
 		}
 	case left_curly_bracks:
-		typ := TypeIdentifier{
-			Name:     p.current_expression(),
-			Generics: map[int]TypeLiteral{},
-		}
-		entries := parse_seperated_list(p, p.parse_key_value_entry, comma, left_curly_bracks, right_curly_bracks, true, true)
+		current := p.current_expression()
 
-		result = InstanceLiteralExpression{
-			Type:     typ,
-			Value:    entries,
-			Kind_:    InstanceLiteralExpressionKind,
-			location: typ.Name.Location(),
+		if current == nil {
+			entries := parse_seperated_list(p, p.parse_key_value_entry, comma, left_curly_bracks, right_curly_bracks, true, true)
+
+			result = MapLiteralExpression{
+				Kind_: MapLiteralExpressionKind,
+
+				Value:    entries,
+				location: p.current_token().Location,
+			}
+		} else {
+			if reflect.TypeOf(current) != reflect.TypeOf(IdentifierExpression{}) && reflect.TypeOf(current) != reflect.TypeOf(MemberExpression{}) {
+				p.must_expect([]token_kind{})
+			}
+
+			typ := TypeIdentifier{
+				Name:     p.current_expression(),
+				Generics: map[int]TypeLiteral{},
+			}
+			entries := parse_seperated_list(p, p.parse_key_value_entry, comma, left_curly_bracks, right_curly_bracks, true, true)
+
+			result = InstanceLiteralExpression{
+				Type:     typ,
+				Value:    entries,
+				Kind_:    InstanceLiteralExpressionKind,
+				location: typ.Name.Location(),
+			}
 		}
 
 		p.backup()

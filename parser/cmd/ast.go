@@ -52,6 +52,8 @@ const (
 	OrExpressionKind              ExpressionKind = "expression:or"
 	NotExpressionKind             ExpressionKind = "expression:not"
 	GiveupExpressionKind          ExpressionKind = "expression:giveup"
+	CoroutFunExpressionKind       ExpressionKind = "expression:corout_fun"
+	GenFunExpressionKind          ExpressionKind = "expression:gen_fun"
 
 	// literal expressions
 	StringLiteralExpressionKind   ExpressionKind = "expression:string-literal"
@@ -59,7 +61,7 @@ const (
 	BoolLiteralExpressionKind     ExpressionKind = "expression:bool-literal"
 	NumberLiteralExpressionKind   ExpressionKind = "expression:number-literal"
 	ListLiteralExpressionKind     ExpressionKind = "expression:list-literal"
-	RecordLiteralExpressionKind   ExpressionKind = "expression:record-literal"
+	MapLiteralExpressionKind      ExpressionKind = "expression:map-literal"
 	InstanceLiteralExpressionKind ExpressionKind = "expression:instance-literal"
 
 	// types
@@ -92,7 +94,7 @@ const (
 	RuneLiteralKind     LiteralKind = "literal:rune"
 	NumberLiteralKind   LiteralKind = "literal:number"
 	ListLiteralKind     LiteralKind = "literal:list"
-	RecordLiteralKind   LiteralKind = "literal:record"
+	MapLiteralKind      LiteralKind = "literal:record"
 	InstanceLiteralKind LiteralKind = "literal:instance"
 
 	// unary arithmetic operation
@@ -947,22 +949,22 @@ func (e ListLiteralExpression) Location() errors.Location {
 	return e.location
 }
 
-type RecordLiteralExpression struct {
+type MapLiteralExpression struct {
 	Kind_ ExpressionKind `json:"kind"`
 
 	Value    []KeyValueEntry `json:"value"`
 	location errors.Location
 }
 
-func (e RecordLiteralExpression) Kind() ExpressionKind {
-	return RecordLiteralExpressionKind
+func (e MapLiteralExpression) Kind() ExpressionKind {
+	return MapLiteralExpressionKind
 }
 
-func (e RecordLiteralExpression) LiteralKind() LiteralKind {
-	return RecordLiteralKind
+func (e MapLiteralExpression) LiteralKind() LiteralKind {
+	return MapLiteralKind
 }
 
-func (e RecordLiteralExpression) Location() errors.Location {
+func (e MapLiteralExpression) Location() errors.Location {
 	return e.location
 }
 
@@ -1139,5 +1141,35 @@ func (e GiveupExpression) Kind() ExpressionKind {
 }
 
 func (e GiveupExpression) Location() errors.Location {
+	return e.location
+}
+
+type CoroutFunExpression struct {
+	Kind_ ExpressionKind `json:"kind"`
+
+	Fun      AnonymousFunExpression `json:"fun"`
+	location errors.Location
+}
+
+func (e CoroutFunExpression) Kind() ExpressionKind {
+	return CoroutFunExpressionKind
+}
+
+func (e CoroutFunExpression) Location() errors.Location {
+	return e.location
+}
+
+type GenFunExpression struct {
+	Kind_ ExpressionKind `json:"kind"`
+
+	Fun      AnonymousFunExpression `json:"fun"`
+	location errors.Location
+}
+
+func (e GenFunExpression) Kind() ExpressionKind {
+	return GenFunExpressionKind
+}
+
+func (e GenFunExpression) Location() errors.Location {
 	return e.location
 }

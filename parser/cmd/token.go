@@ -72,6 +72,7 @@ const (
 	else_keyword
 	for_keyword
 	fun_keyword
+	gen_keyword
 	giveup_keyword
 	hidden_keyword
 	if_keyword
@@ -154,6 +155,7 @@ var token_map = map[token_kind]string{
 	else_keyword:       "else",
 	for_keyword:        "for",
 	fun_keyword:        "fun",
+	gen_keyword:        "gen",
 	giveup_keyword:     "giveup",
 	hidden_keyword:     "hidden",
 	if_keyword:         "if",

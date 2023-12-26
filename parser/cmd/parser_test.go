@@ -1183,6 +1183,54 @@ func TestNotExpression(t *testing.T) {
 	assert_type(t, expression.Expression.(parser.GroupExpression).Expression, parser.ArithmeticExpression{})
 }
 
+func TestCoroutFun(t *testing.T) {
+	input := []byte(`package main
+	fun main() {
+		corout fun() Int {
+			print(message)
+			return 0
+		}
+	}
+	`)
+
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, definition, &parser.UnboundFunDefinitionStatement{})
+
+	fun := definition.(*parser.UnboundFunDefinitionStatement)
+	expression := fun.Body[0].(parser.ExpressionStatement).Expression
+
+	assert_type(t, expression, parser.CoroutFunExpression{})
+	assert_type(t, expression.(parser.CoroutFunExpression).Fun, parser.AnonymousFunExpression{})
+}
+
+func TestGenFun(t *testing.T) {
+	input := []byte(`package main
+	fun main() {
+		gen fun() Int {
+			print(message)
+			return 0
+		}
+	}
+	`)
+
+	ast, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	definition := ast.Definitions[0]
+	assert_type(t, definition, &parser.UnboundFunDefinitionStatement{})
+
+	fun := definition.(*parser.UnboundFunDefinitionStatement)
+	expression := fun.Body[0].(parser.ExpressionStatement).Expression
+
+	assert_type(t, expression, parser.GenFunExpression{})
+	assert_type(t, expression.(parser.GenFunExpression).Fun, parser.AnonymousFunExpression{})
+}
+
 func TestMisc(t *testing.T) {
 	input := []byte(`package main
 	fun for Test main() {
@@ -1201,9 +1249,20 @@ func TestMisc(t *testing.T) {
 	var message = "Hello, World"
 	
 	fun main() {
-		// var new_message = message + "!"
-		// print(new_message)
+		var new_message = message + "!"
+		print(new_message)
 	}`)
+
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte(`package main
+
+	var data = {
+		key: "value"
+	}
+`)
 
 	_, err = parser.Parse(input, "test.mb")
 

@@ -27,6 +27,7 @@ var keywords = map[string]token_kind{
 	"else":       else_keyword,
 	"for":        for_keyword,
 	"fun":        fun_keyword,
+	"gen":        gen_keyword,
 	"giveup":     giveup_keyword,
 	"hidden":     hidden_keyword,
 	"if":         if_keyword,
