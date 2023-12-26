@@ -37,6 +37,7 @@ const (
 	IdentifierExpressionKind      ExpressionKind = "expression:identifier"
 	ArithmeticExpressionKind      ExpressionKind = "expression:arithmetic"
 	BinaryExpressionKind          ExpressionKind = "expression:binary"
+	ComparisonExpressionKind      ExpressionKind = "expression:comparison"
 	CallExpressionKind            ExpressionKind = "expression:call"
 	MemberExpressionKind          ExpressionKind = "expression:member"
 	IndexExpressionKind           ExpressionKind = "expression:index"
@@ -109,6 +110,11 @@ type ConstrainedType struct {
 	Location   errors.Location      `json:"location"`
 }
 
+type OperatorToken struct {
+	Literal  string `json:"literal"`
+	location errors.Location
+}
+
 type TypeLiteral interface {
 	Location() errors.Location
 	TypeKind() TypeKind
@@ -162,7 +168,7 @@ type OperatedType struct {
 	TypeKind_     TypeKind    `json:"type_kind"`
 	LeftHandSide  TypeLiteral `json:"left_hand_side"`
 	RightHandSide TypeLiteral `json:"right_hand_side"`
-	Operator      string
+	Operator      OperatorToken
 	location      errors.Location
 }
 
@@ -382,9 +388,9 @@ func (s DeclarationStatement) Location() errors.Location {
 type AssignmentStatement struct {
 	Kind_ StatementKind `json:"kind"`
 
-	LeftHandSide  Expression `json:"left_hand_side"`
-	RightHandSide Expression `json:"right_hand_side"`
-	Operator      string     `json:"operator"`
+	LeftHandSide  Expression    `json:"left_hand_side"`
+	RightHandSide Expression    `json:"right_hand_side"`
+	Operator      OperatorToken `json:"operator"`
 	location      errors.Location
 }
 
@@ -808,9 +814,9 @@ func (e MatchSelfExpression) Location() errors.Location {
 type ArithmeticExpression struct {
 	Kind_ ExpressionKind `json:"kind"`
 
-	LeftHandSide  Expression `json:"left_hand_side"`
-	RightHandSide Expression `json:"right_hand_side"`
-	Operator      string     `json:"operator"`
+	LeftHandSide  Expression    `json:"left_hand_side"`
+	RightHandSide Expression    `json:"right_hand_side"`
+	Operator      OperatorToken `json:"operator"`
 	location      errors.Location
 }
 
@@ -825,9 +831,9 @@ func (e ArithmeticExpression) Location() errors.Location {
 type BinaryExpression struct {
 	Kind_ ExpressionKind `json:"kind"`
 
-	LeftHandSide  Expression `json:"left_hand_side"`
-	RightHandSide Expression `json:"right_hand_side"`
-	Operator      string     `json:"operator"`
+	LeftHandSide  Expression    `json:"left_hand_side"`
+	RightHandSide Expression    `json:"right_hand_side"`
+	Operator      OperatorToken `json:"operator"`
 	location      errors.Location
 }
 
@@ -836,6 +842,23 @@ func (e BinaryExpression) Kind() ExpressionKind {
 }
 
 func (e BinaryExpression) Location() errors.Location {
+	return e.location
+}
+
+type ComparisonExpression struct {
+	Kind_ ExpressionKind `json:"kind"`
+
+	LeftHandSide  Expression    `json:"left_hand_side"`
+	RightHandSide Expression    `json:"right_hand_side"`
+	Operator      OperatorToken `json:"operator"`
+	location      errors.Location
+}
+
+func (e ComparisonExpression) Kind() ExpressionKind {
+	return ComparisonExpressionKind
+}
+
+func (e ComparisonExpression) Location() errors.Location {
 	return e.location
 }
 

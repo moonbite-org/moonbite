@@ -35,23 +35,24 @@ const (
 	single_line_comment
 
 	Operator
-	plus
-	minus
-	star
-	forward_slash
-	percent
-	increment
-	decrement
-	power
-	pipe
-	ampersand
-	assignment
-	arithmetic_assignment
+	plus                  // +
+	minus                 // -
+	star                  // *
+	forward_slash         // /
+	percent               // %
+	increment             // ++
+	decrement             // --
+	pipe                  // |
+	ampersand             // &
+	assignment            // =
+	arithmetic_assignment // += -= *= /= %=
 	exclamation
-	binary_operator // == != < > <= >= && ||
-	caret
-	channel
-	then
+	power               // **
+	binary_operator     // && ||
+	comparison_operator // == != < > <= >=
+	caret               // ^
+	channel             // <-
+	then                // ->
 
 	identifier
 
@@ -131,7 +132,8 @@ var token_map = map[token_kind]string{
 	assignment:            "Assignment",
 	arithmetic_assignment: "ArithmeticAssignment",
 	exclamation:           "Exclamation",
-	binary_operator:       "BinaryOperator", // == != < > <= >=
+	binary_operator:       "BinaryOperator",     // && ||
+	comparison_operator:   "ComparisonOperator", // == != <= >=
 	caret:                 "Caret",
 	channel:               "Channel",
 	then:                  "Then",

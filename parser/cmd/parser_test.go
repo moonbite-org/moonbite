@@ -282,42 +282,42 @@ func TestAssignmentStatement(t *testing.T) {
 	body := definition.(*parser.UnboundFunDefinitionStatement).Body
 
 	assert_type(t, body[0], parser.AssignmentStatement{})
-	assert_string(t, body[0].(parser.AssignmentStatement).Operator, "=")
+	assert_string(t, body[0].(parser.AssignmentStatement).Operator.Literal, "=")
 	assert_type(t, body[0].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
 	assert_string(t, body[0].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
 	assert_type(t, body[0].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
 	assert_int(t, body[0].(parser.AssignmentStatement).RightHandSide.(parser.NumberLiteralExpression).Value.Value.(int), 0)
 
 	assert_type(t, body[1], parser.AssignmentStatement{})
-	assert_string(t, body[1].(parser.AssignmentStatement).Operator, "+=")
+	assert_string(t, body[1].(parser.AssignmentStatement).Operator.Literal, "+=")
 	assert_type(t, body[1].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
 	assert_string(t, body[1].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
 	assert_type(t, body[1].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
 	assert_int(t, body[1].(parser.AssignmentStatement).RightHandSide.(parser.NumberLiteralExpression).Value.Value.(int), 10)
 
 	assert_type(t, body[2], parser.AssignmentStatement{})
-	assert_string(t, body[2].(parser.AssignmentStatement).Operator, "-=")
+	assert_string(t, body[2].(parser.AssignmentStatement).Operator.Literal, "-=")
 	assert_type(t, body[2].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
 	assert_string(t, body[2].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
 	assert_type(t, body[2].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
 	assert_int(t, body[2].(parser.AssignmentStatement).RightHandSide.(parser.NumberLiteralExpression).Value.Value.(int), 1)
 
 	assert_type(t, body[3], parser.AssignmentStatement{})
-	assert_string(t, body[3].(parser.AssignmentStatement).Operator, "/=")
+	assert_string(t, body[3].(parser.AssignmentStatement).Operator.Literal, "/=")
 	assert_type(t, body[3].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
 	assert_string(t, body[3].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
 	assert_type(t, body[3].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
 	assert_int(t, body[3].(parser.AssignmentStatement).RightHandSide.(parser.NumberLiteralExpression).Value.Value.(int), 3)
 
 	assert_type(t, body[4], parser.AssignmentStatement{})
-	assert_string(t, body[4].(parser.AssignmentStatement).Operator, "*=")
+	assert_string(t, body[4].(parser.AssignmentStatement).Operator.Literal, "*=")
 	assert_type(t, body[4].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
 	assert_string(t, body[4].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
 	assert_type(t, body[4].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
 	assert_int(t, body[4].(parser.AssignmentStatement).RightHandSide.(parser.NumberLiteralExpression).Value.Value.(int), 4)
 
 	assert_type(t, body[5], parser.AssignmentStatement{})
-	assert_string(t, body[5].(parser.AssignmentStatement).Operator, "%=")
+	assert_string(t, body[5].(parser.AssignmentStatement).Operator.Literal, "%=")
 	assert_type(t, body[5].(parser.AssignmentStatement).LeftHandSide, parser.IdentifierExpression{})
 	assert_string(t, body[5].(parser.AssignmentStatement).LeftHandSide.(parser.IdentifierExpression).Value, "count")
 	assert_type(t, body[5].(parser.AssignmentStatement).RightHandSide, parser.NumberLiteralExpression{})
@@ -388,7 +388,7 @@ func TestTypeDefinitionStatement(t *testing.T) {
 	assert_type(t, definition.Definition, parser.OperatedType{})
 	operated := definition.Definition.(parser.OperatedType)
 
-	assert_string(t, operated.Operator, "&")
+	assert_string(t, operated.Operator.Literal, "&")
 	assert_type(t, operated.LeftHandSide, parser.TypeIdentifier{})
 	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "string")
 	assert_type(t, operated.RightHandSide, parser.TypeIdentifier{})
@@ -401,7 +401,7 @@ func TestTypeDefinitionStatement(t *testing.T) {
 	assert_type(t, definition.Definition, parser.OperatedType{})
 	operated = definition.Definition.(parser.OperatedType)
 
-	assert_string(t, operated.Operator, "|")
+	assert_string(t, operated.Operator.Literal, "|")
 	assert_type(t, operated.LeftHandSide, parser.TypeIdentifier{})
 	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "string")
 	assert_type(t, operated.RightHandSide, parser.TypeIdentifier{})
@@ -414,13 +414,13 @@ func TestTypeDefinitionStatement(t *testing.T) {
 	assert_type(t, definition.Definition, parser.OperatedType{})
 	operated = definition.Definition.(parser.OperatedType)
 
-	assert_string(t, operated.Operator, "&")
+	assert_string(t, operated.Operator.Literal, "&")
 	assert_type(t, operated.LeftHandSide, parser.TypeIdentifier{})
 	assert_string(t, operated.LeftHandSide.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value, "string")
 	assert_type(t, operated.RightHandSide, parser.GroupType{})
 	assert_type(t, operated.RightHandSide.(parser.GroupType).Type, parser.OperatedType{})
 	operated = operated.RightHandSide.(parser.GroupType).Type.(parser.OperatedType)
-	assert_string(t, operated.Operator, "|")
+	assert_string(t, operated.Operator.Literal, "|")
 
 	definition = ast.Definitions[6].(parser.TypeDefinitionStatement)
 	assert_type(t, definition, parser.TypeDefinitionStatement{})
@@ -578,7 +578,7 @@ func TestArithmeticExpression(t *testing.T) {
 
 	assert_type(t, expression.LeftHandSide, parser.NumberLiteralExpression{})
 	assert_type(t, expression.RightHandSide, parser.NumberLiteralExpression{})
-	assert_string(t, expression.Operator, "+")
+	assert_string(t, expression.Operator.Literal, "+")
 
 	input = []byte("package main const test = 2 + 3 * 5")
 	ast, err = parser.Parse(input, "test.mb")
@@ -590,8 +590,8 @@ func TestArithmeticExpression(t *testing.T) {
 
 	assert_type(t, expression.LeftHandSide, parser.NumberLiteralExpression{})
 	assert_type(t, expression.RightHandSide, parser.ArithmeticExpression{})
-	assert_string(t, expression.Operator, "+")
-	assert_string(t, expression.RightHandSide.(parser.ArithmeticExpression).Operator, "*")
+	assert_string(t, expression.Operator.Literal, "+")
+	assert_string(t, expression.RightHandSide.(parser.ArithmeticExpression).Operator.Literal, "*")
 
 	input = []byte("package main const test = (2 + 3) * 5")
 	ast, err = parser.Parse(input, "test.mb")
@@ -603,12 +603,12 @@ func TestArithmeticExpression(t *testing.T) {
 
 	assert_type(t, expression.LeftHandSide, parser.GroupExpression{})
 	assert_type(t, expression.RightHandSide, parser.NumberLiteralExpression{})
-	assert_string(t, expression.Operator, "*")
+	assert_string(t, expression.Operator.Literal, "*")
 
 	group := expression.LeftHandSide.(parser.GroupExpression)
 
 	assert_type(t, group.Expression, parser.ArithmeticExpression{})
-	assert_string(t, group.Expression.(parser.ArithmeticExpression).Operator, "+")
+	assert_string(t, group.Expression.(parser.ArithmeticExpression).Operator.Literal, "+")
 
 	input = []byte("package main const test = (2 + 3 * 5")
 	ast, err = parser.Parse(input, "test.mb")
@@ -621,7 +621,7 @@ func TestArithmeticExpression(t *testing.T) {
 	definition = ast.Definitions[0]
 	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.ArithmeticExpression{})
 	expression = (*definition.(parser.DeclarationStatement).Value).(parser.ArithmeticExpression)
-	assert_string(t, expression.Operator, "-")
+	assert_string(t, expression.Operator.Literal, "-")
 
 	input = []byte("package main const test = 2 / 3")
 	ast, err = parser.Parse(input, "test.mb")
@@ -630,7 +630,7 @@ func TestArithmeticExpression(t *testing.T) {
 	definition = ast.Definitions[0]
 	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.ArithmeticExpression{})
 	expression = (*definition.(parser.DeclarationStatement).Value).(parser.ArithmeticExpression)
-	assert_string(t, expression.Operator, "/")
+	assert_string(t, expression.Operator.Literal, "/")
 
 	input = []byte("package main const test = 2 % 3")
 	ast, err = parser.Parse(input, "test.mb")
@@ -639,22 +639,34 @@ func TestArithmeticExpression(t *testing.T) {
 	definition = ast.Definitions[0]
 	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.ArithmeticExpression{})
 	expression = (*definition.(parser.DeclarationStatement).Value).(parser.ArithmeticExpression)
-	assert_string(t, expression.Operator, "%")
+	assert_string(t, expression.Operator.Literal, "%")
 }
 
 func TestBinaryExpression(t *testing.T) {
+	input := []byte("package main const test = 2 && false")
+	_, err := parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte("package main const test = false || []")
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+}
+
+func TestComparisonExpression(t *testing.T) {
 	input := []byte("package main const test = 2 == count")
 	ast, err := parser.Parse(input, "test.mb")
 
 	assert_no_error(t, err)
 
 	definition := ast.Definitions[0]
-	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.BinaryExpression{})
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.ComparisonExpression{})
 
-	expression := (*definition.(parser.DeclarationStatement).Value).(parser.BinaryExpression)
+	expression := (*definition.(parser.DeclarationStatement).Value).(parser.ComparisonExpression)
 	assert_type(t, expression.LeftHandSide, parser.NumberLiteralExpression{})
 	assert_type(t, expression.RightHandSide, parser.IdentifierExpression{})
-	assert_string(t, expression.Operator, "==")
+	assert_string(t, expression.Operator.Literal, "==")
 
 	input = []byte("package main const test = 2 > 5")
 	ast, err = parser.Parse(input, "test.mb")
@@ -662,12 +674,12 @@ func TestBinaryExpression(t *testing.T) {
 	assert_no_error(t, err)
 
 	definition = ast.Definitions[0]
-	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.BinaryExpression{})
+	assert_type(t, *definition.(parser.DeclarationStatement).Value, parser.ComparisonExpression{})
 
-	expression = (*definition.(parser.DeclarationStatement).Value).(parser.BinaryExpression)
+	expression = (*definition.(parser.DeclarationStatement).Value).(parser.ComparisonExpression)
 	assert_type(t, expression.LeftHandSide, parser.NumberLiteralExpression{})
 	assert_type(t, expression.RightHandSide, parser.NumberLiteralExpression{})
-	assert_string(t, expression.Operator, ">")
+	assert_string(t, expression.Operator.Literal, ">")
 
 	input = []byte("package main const test = 2 >< 5")
 	ast, err = parser.Parse(input, "test.mb")
@@ -689,15 +701,15 @@ func TestBinaryExpression(t *testing.T) {
 
 	assert_error(t, err)
 
-	input = []byte("package main const test = 2 && false")
-	ast, err = parser.Parse(input, "test.mb")
+	input = []byte(`package main
+	fun main() {
+		const data = count < data > []
+	}
+	`)
 
-	assert_no_error(t, err)
+	_, err = parser.Parse(input, "test.mb")
 
-	input = []byte("package main const test = false || []")
-	ast, err = parser.Parse(input, "test.mb")
-
-	assert_no_error(t, err)
+	assert_error(t, err)
 }
 
 func TestCallExpression(t *testing.T) {
@@ -971,7 +983,7 @@ func TestThisExpression(t *testing.T) {
 }
 
 func TestArithmeticUnaryExpression(t *testing.T) {
-	input := []byte(`package main 
+	input := []byte(`package main
 	fun main() {
 		index++
 		index--
@@ -1112,7 +1124,7 @@ func TestFunExpression(t *testing.T) {
 
 	assert_error(t, err)
 
-	input = []byte(`package main 
+	input = []byte(`package main
 	const test = fun() http.Response {}
 	`)
 	_, err = parser.Parse(input, "test.mb")
@@ -1121,7 +1133,7 @@ func TestFunExpression(t *testing.T) {
 }
 
 func TestOrExpression(t *testing.T) {
-	input := []byte(`package main 
+	input := []byte(`package main
 	const test = read_file() or 0
 	const test = read_file() or giveup
 	`)
@@ -1163,7 +1175,7 @@ func TestOrExpression(t *testing.T) {
 }
 
 func TestNotExpression(t *testing.T) {
-	input := []byte(`package main 
+	input := []byte(`package main
 	const test = !is_admin
 	const test = !(2 * 2)
 	`)
@@ -1297,7 +1309,7 @@ func TestMisc(t *testing.T) {
 	input = []byte(`package main
 
 	var message = "Hello, World"
-	
+
 	fun main() {
 		var new_message = message + "!"
 		print(new_message)
@@ -1327,6 +1339,16 @@ func TestMisc(t *testing.T) {
 		}
 	}
 `)
+
+	_, err = parser.Parse(input, "test.mb")
+
+	assert_no_error(t, err)
+
+	input = []byte(`package main
+	fun main() {
+		const data = List<Bool>{ length: 10 }
+	}
+	`)
 
 	_, err = parser.Parse(input, "test.mb")
 

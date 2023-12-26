@@ -413,9 +413,12 @@ func (p *parser_s) parse_assignment_statement() AssignmentStatement {
 	return AssignmentStatement{
 		LeftHandSide:  lhs,
 		RightHandSide: rhs,
-		Operator:      operator.Literal,
-		Kind_:         AssignmentStatementKind,
-		location:      lhs.Location(),
+		Operator: OperatorToken{
+			Literal:  operator.Literal,
+			location: operator.Location,
+		},
+		Kind_:    AssignmentStatementKind,
+		location: lhs.Location(),
 	}
 }
 
@@ -639,8 +642,11 @@ func (p *parser_s) parse_type_literal() TypeLiteral {
 			TypeKind_:     OperatedTypeKind,
 			LeftHandSide:  result,
 			RightHandSide: right_hand,
-			Operator:      is_operated.Literal,
-			location:      result.Location(),
+			Operator: OperatorToken{
+				Literal:  is_operated.Literal,
+				location: is_operated.Location,
+			},
+			location: result.Location(),
 		}
 	}
 
@@ -657,10 +663,11 @@ func (p *parser_s) parse_type_identifier() TypeIdentifier {
 		name = *p.create_ident(*is_cardinal)
 	} else {
 		expression := p.parse_type_expression()
-		if expression != nil {
-			name = expression
-		} else {
+
+		if expression == nil {
 			p.must_expect([]token_kind{})
+		} else {
+			name = expression
 		}
 	}
 
@@ -720,6 +727,8 @@ func (p *parser_s) continue_type_expression() Expression {
 		p.pop_expression()
 		return result
 	}
+
+	p.skip()
 
 	switch p.current_token().Kind {
 	case identifier:
@@ -1376,21 +1385,10 @@ func (p *parser_s) continue_expression() Expression {
 		} else {
 			return p.parse_call_expression()
 		}
-	case left_angle_bracks, right_angle_bracks, binary_operator:
+	case binary_operator:
 		return p.parse_binary_expression()
-	// parsing typed struct literals like Slice<Int>{} are a problem
-	// because the parser cannot distinguish it from an expression like
-	// Slice < Int > {} (as in less than, greater than)
-
-	// case right_angle_bracks:
-	// 	p.advance()
-	// 	is_literal := p.might_expect([]token_kind{left_curly_bracks})
-	// 	p.backup()
-
-	// 	if is_literal != nil {
-	// 		fmt.Println(p.current_token(), p.current_expression())
-	// 		fmt.Println("literal")
-	// 	}
+	case left_angle_bracks, right_angle_bracks, comparison_operator:
+		return p.parse_comparison_expression()
 	case plus, minus, star, forward_slash, percent:
 		return p.parse_arithmetic_expression()
 	case increment, decrement:
@@ -1666,9 +1664,12 @@ func (p *parser_s) parse_arithmetic_expression() Expression {
 	default_expression := ArithmeticExpression{
 		LeftHandSide:  current,
 		RightHandSide: rhs,
-		Operator:      operator.Literal,
-		Kind_:         ArithmeticExpressionKind,
-		location:      current.Location(),
+		Operator: OperatorToken{
+			Literal:  operator.Literal,
+			location: operator.Location,
+		},
+		Kind_:    ArithmeticExpressionKind,
+		location: current.Location(),
 	}
 
 	if operator.Kind == plus || operator.Kind == minus {
@@ -1687,14 +1688,97 @@ func (p *parser_s) parse_arithmetic_expression() Expression {
 		LeftHandSide: ArithmeticExpression{
 			LeftHandSide:  current,
 			RightHandSide: rhs_e.LeftHandSide,
-			Operator:      operator.Literal,
-			Kind_:         ArithmeticExpressionKind,
-			location:      current.Location(),
+			Operator: OperatorToken{
+				Literal:  operator.Literal,
+				location: operator.Location,
+			},
+			Kind_:    ArithmeticExpressionKind,
+			location: current.Location(),
 		},
 		RightHandSide: rhs_e.RightHandSide,
 		Operator:      rhs_e.Operator,
 		Kind_:         ArithmeticExpressionKind,
 		location:      current.Location(),
+	})
+
+	return p.continue_expression()
+}
+
+func (p *parser_s) parse_comparison_expression() Expression {
+	defer p.catch()
+
+	start_offset := p.offset
+	current := p.current_expression()
+	if current == nil {
+		p.must_expect([]token_kind{})
+	}
+
+	operator := p.must_expect([]token_kind{left_angle_bracks, right_angle_bracks, comparison_operator})
+	skipped := p.skip()
+
+	rhs := p.parse_expression()
+
+	if rhs == nil {
+		p.backup_by(skipped)
+		p.must_expect([]token_kind{})
+	}
+
+	/* normally an expression like var0 < var1 > var2 is not acceptable
+	but there is a chance that it is a typed instance literal like Type<Generic>{}
+	check if right hand side is exaclty a map literal and the operator is >
+	if so, turn the map literal to an instance literal and return */
+
+	/* evidently, this has a bug in that it expects no whitespace between type and its generic
+	so Type< Generic> or Type<Generic0, Generic1> would be unacceptable */
+	if rhs.Kind() == ComparisonExpressionKind {
+		right_comparison := rhs.(ComparisonExpression)
+		if right_comparison.Operator.Literal == ">" && right_comparison.RightHandSide.Kind() == MapLiteralExpressionKind {
+			left_offset := p.offset
+			p.offset = start_offset
+
+			for p.current_token().Kind != whitespace {
+				p.backup()
+			}
+
+			p.skip()
+			typ := p.parse_type_literal()
+
+			if typ == nil {
+				p.must_expect([]token_kind{})
+			}
+			if typ.TypeKind() != TypeIdentifierKind {
+				p.must_expect([]token_kind{})
+			}
+
+			value := right_comparison.RightHandSide.(MapLiteralExpression).Value
+			p.offset = left_offset
+			p.skip()
+
+			return InstanceLiteralExpression{
+				Kind_: InstanceLiteralExpressionKind,
+
+				Type:     typ.(TypeIdentifier),
+				Value:    value,
+				location: p.current_token().Location,
+			}
+		}
+
+		current_offset := p.current_token().Location.Offset
+		skipped_offset := right_comparison.Operator.location.Offset
+		p.backup_by(current_offset - skipped_offset)
+		p.must_expect([]token_kind{})
+	}
+
+	p.set_current_expression(ComparisonExpression{
+		Kind_: ComparisonExpressionKind,
+
+		LeftHandSide:  current,
+		RightHandSide: rhs,
+		Operator: OperatorToken{
+			Literal:  operator.Literal,
+			location: operator.Location,
+		},
+		location: current.Location(),
 	})
 
 	return p.continue_expression()
@@ -1708,7 +1792,7 @@ func (p *parser_s) parse_binary_expression() Expression {
 		p.must_expect([]token_kind{})
 	}
 
-	operator := p.must_expect([]token_kind{left_angle_bracks, right_angle_bracks, binary_operator})
+	operator := p.must_expect([]token_kind{binary_operator})
 	skipped := p.skip()
 
 	rhs := p.parse_expression()
@@ -1721,9 +1805,12 @@ func (p *parser_s) parse_binary_expression() Expression {
 	p.set_current_expression(BinaryExpression{
 		LeftHandSide:  current,
 		RightHandSide: rhs,
-		Operator:      operator.Literal,
-		Kind_:         BinaryExpressionKind,
-		location:      current.Location(),
+		Operator: OperatorToken{
+			Literal:  operator.Literal,
+			location: operator.Location,
+		},
+		Kind_:    BinaryExpressionKind,
+		location: current.Location(),
 	})
 
 	return p.continue_expression()

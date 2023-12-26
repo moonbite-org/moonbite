@@ -381,7 +381,7 @@ func (l *lexer) lex_operator_chars() {
 	switch l.current_rune() {
 	case '=':
 		if l.next_rune() == '=' {
-			token = l.create_token(binary_operator, 2)
+			token = l.create_token(comparison_operator, 2)
 		} else {
 			token = l.create_token(assignment, 1)
 		}
@@ -441,7 +441,7 @@ func (l *lexer) lex_operator_chars() {
 		next := l.next_rune()
 
 		if next == '=' {
-			token = l.create_token(binary_operator, 2)
+			token = l.create_token(comparison_operator, 2)
 		} else {
 			token = l.create_token(exclamation, 1)
 		}
@@ -492,7 +492,7 @@ func (l *lexer) lex_control_chars() {
 		token = l.create_token(semicolon, 1)
 	case '<':
 		if l.next_rune() == '=' {
-			token = l.create_token(binary_operator, 2)
+			token = l.create_token(comparison_operator, 2)
 		} else if l.next_rune() == '-' {
 			token = l.create_token(channel, 2)
 		} else {
@@ -500,7 +500,7 @@ func (l *lexer) lex_control_chars() {
 		}
 	case '>':
 		if l.next_rune() == '=' {
-			token = l.create_token(binary_operator, 2)
+			token = l.create_token(comparison_operator, 2)
 		} else {
 			token = l.create_token(right_angle_bracks, 1)
 		}
