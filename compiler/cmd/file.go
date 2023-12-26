@@ -1,15 +1,13 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/moonbite-org/moonbite/common"
 	errors "github.com/moonbite-org/moonbite/error"
 	parser "github.com/moonbite-org/moonbite/parser/cmd"
 )
 
 type PackageCompiler struct {
-	EventTarget
+	IsRoot       bool
 	Definitions  []parser.Definition
 	SymbolTable  *SymbolTable
 	ConstantPool common.ConstantPool
@@ -17,9 +15,9 @@ type PackageCompiler struct {
 	Instructions common.InstructionSet
 }
 
-func (c PackageCompiler) Compile() errors.Error {
+func (c *PackageCompiler) Compile() errors.Error {
 	for _, builtin := range common.Builtins {
-		c.SymbolTable.Define(builtin.Name, parser.ConstantKind)
+		c.SymbolTable.Define(builtin.Name, parser.ConstantKind, false)
 	}
 
 	for _, definition := range c.Definitions {
@@ -28,12 +26,19 @@ func (c PackageCompiler) Compile() errors.Error {
 			return err
 		}
 		c.Instructions = append(c.Instructions, instructions...)
-		fmt.Println(instructions)
 	}
 
-	fmt.Println(c.Instructions)
-	fmt.Println(c.ConstantPool)
-	fmt.Println(c.SymbolTable)
+	if c.IsRoot {
+		instructions, err := c.compile_call_expression(parser.CallExpression{
+			Callee:    parser.IdentifierExpression{Value: "main"},
+			Arguments: []parser.Expression{},
+		})
+		if err.Exists {
+			return err
+		}
+
+		c.Instructions = append(c.Instructions, instructions...)
+	}
 
 	return errors.EmptyError
 }
@@ -46,12 +51,13 @@ func (c PackageCompiler) GetBytes() []byte {
 	return result
 }
 
-func NewPackageCompiler(definitions []parser.Definition) PackageCompiler {
+func NewPackageCompiler(definitions []parser.Definition, is_root bool) PackageCompiler {
 	return PackageCompiler{
 		Definitions: definitions,
 		SymbolTable: NewSymbolTable(),
 		ConstantPool: common.ConstantPool{
 			Values: [1024]common.Object{},
 		},
+		IsRoot: is_root,
 	}
 }

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/moonbite-org/moonbite/common"
 	errors "github.com/moonbite-org/moonbite/error"
@@ -17,12 +18,35 @@ func (c *PackageCompiler) leave_scope() {
 	c.SymbolTable = c.SymbolTable.Outer
 }
 
+func (c *PackageCompiler) resolve_assignee(assignee parser.Expression) (*Symbol, errors.Error) {
+	acceptable_assignees := []parser.ExpressionKind{parser.IdentifierExpressionKind, parser.MemberExpressionKind, parser.IndexExpressionKind}
+
+	if !slices.Contains(acceptable_assignees, assignee.Kind()) {
+		return nil, errors.CreateCompileError("expression is not assignable", assignee.Location())
+	}
+
+	switch assignee.Kind() {
+	case parser.IdentifierExpressionKind:
+		symbol := c.SymbolTable.Resolve(assignee.(parser.IdentifierExpression).Value)
+
+		return symbol, errors.EmptyError
+	case parser.MemberExpressionKind:
+		return c.resolve_assignee(assignee.(parser.MemberExpression).LeftHandSide)
+	case parser.IndexExpressionKind:
+		return c.resolve_assignee(assignee.(parser.IndexExpression).Host)
+	default:
+		return nil, errors.CreateCompileError("could not resolve assignee", assignee.Location())
+	}
+}
+
 func (c *PackageCompiler) compile_statement(statement parser.Statement) (common.InstructionSet, errors.Error) {
 	switch statement.Kind() {
 	case parser.ExpressionStatementKind:
 		return c.compile_expression(statement.(parser.ExpressionStatement).Expression, true)
 	case parser.DeclarationStatementKind:
 		return c.compile_declaration_statement(statement.(parser.DeclarationStatement))
+	case parser.AssignmentStatementKind:
+		return c.compile_assignment_statement(statement.(parser.AssignmentStatement))
 	case parser.UnboundFunDefinitionStatementKind:
 		return c.compile_unbound_fun_definition_statement(*statement.(*parser.UnboundFunDefinitionStatement))
 	case parser.ReturnStatementKind:
@@ -59,12 +83,62 @@ func (c *PackageCompiler) compile_declaration_statement(statement parser.Declara
 		result = append(result, common.NewInstruction(common.OpConstant, index))
 	}
 
-	symbol := c.SymbolTable.Define(statement.Name.Value, statement.VarKind)
+	symbol, err := c.SymbolTable.Define(statement.Name.Value, statement.VarKind, statement.Hidden)
+	if err != nil {
+		return result, errors.CreateCompileError(err.Error(), statement.Name.Location())
+	}
 
 	if symbol.Scope == GlobalScope {
 		result = append(result, common.NewInstruction(common.OpSet, symbol.Index))
 	} else {
 		result = append(result, common.NewInstruction(common.OpSetLocal, symbol.Index))
+	}
+
+	return result, errors.EmptyError
+}
+
+func (c *PackageCompiler) compile_assignment_statement(statement parser.AssignmentStatement) (common.InstructionSet, errors.Error) {
+	result := common.InstructionSet{}
+
+	symbol, err := c.resolve_assignee(statement.LeftHandSide)
+
+	if err.Exists {
+		return result, err
+	}
+
+	if symbol.Kind == parser.ConstantKind {
+		return result, errors.CreateCompileError(fmt.Sprintf("cannot assign to constant variable '%s'", symbol.Name), statement.Location())
+	}
+
+	_, err = c.compile_expression(statement.LeftHandSide, false)
+	if err.Exists {
+		return result, err
+	}
+
+	value, err := c.compile_expression(statement.RightHandSide, false)
+	if err.Exists {
+		return result, err
+	}
+
+	switch statement.LeftHandSide.Kind() {
+	case parser.IdentifierExpressionKind:
+		result = append(result, value...)
+
+		if symbol.Scope == GlobalScope {
+			result = append(result, common.NewInstruction(common.OpAssign, symbol.Index))
+		} else {
+			result = append(result, common.NewInstruction(common.OpAssignLocal, symbol.Index))
+		}
+		return result, errors.EmptyError
+	case parser.IndexExpressionKind, parser.MemberExpressionKind:
+		assignee, err := c.compile_expression(statement.LeftHandSide, false)
+		if err.Exists {
+			return result, err
+		}
+
+		assignee = assignee[0 : len(assignee)-1]
+		result = append(result, assignee...)
+		result = append(result, common.NewInstruction(common.OpSetItem, symbol.Index))
 	}
 
 	return result, errors.EmptyError
@@ -76,6 +150,11 @@ func (c *PackageCompiler) compile_unbound_fun_definition_statement(statement par
 	fun_instructions := common.InstructionSet{}
 
 	c.enter_scope()
+
+	for _, parameter := range statement.Signature.Parameters {
+		c.SymbolTable.Define(parameter.Name.Value, parser.ConstantKind, statement.Hidden)
+	}
+
 	for _, sub_statement := range statement.Body {
 		instructions, err := c.compile_statement(sub_statement)
 		if err.Exists {
@@ -92,7 +171,10 @@ func (c *PackageCompiler) compile_unbound_fun_definition_statement(statement par
 	index := c.ConstantPool.Add(value)
 	result = append(result, common.NewInstruction(common.OpConstant, index))
 
-	symbol := c.SymbolTable.Define(statement.Signature.Name.Value, parser.ConstantKind)
+	symbol, err := c.SymbolTable.Define(statement.Signature.Name.Value, parser.ConstantKind, statement.Hidden)
+	if err != nil {
+		return result, errors.CreateCompileError(err.Error(), statement.Signature.Name.Location())
+	}
 
 	if symbol.Scope == GlobalScope {
 		result = append(result, common.NewInstruction(common.OpSet, symbol.Index))
@@ -244,7 +326,7 @@ func (c *PackageCompiler) compile_loop_statement(statement parser.LoopStatement)
 
 	switch statement.Predicate.LoopKind() {
 	case parser.UnipartiteLoopKind:
-		predicate, err = c.compile_uinpartite_loop_predicate(statement.Predicate.(parser.UnipartiteLoopPredicate), body.GetSize()+template.GetSize())
+		predicate, err = c.compile_uninpartite_loop_predicate(statement.Predicate.(parser.UnipartiteLoopPredicate), body.GetSize()+template.GetSize())
 		if err.Exists {
 			return result, err
 		}
@@ -257,7 +339,7 @@ func (c *PackageCompiler) compile_loop_statement(statement parser.LoopStatement)
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_uinpartite_loop_predicate(predicate parser.UnipartiteLoopPredicate, size int) (common.InstructionSet, errors.Error) {
+func (c *PackageCompiler) compile_uninpartite_loop_predicate(predicate parser.UnipartiteLoopPredicate, size int) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	instructions, err := c.compile_expression(predicate.Expression, false)
@@ -269,6 +351,41 @@ func (c *PackageCompiler) compile_uinpartite_loop_predicate(predicate parser.Uni
 	result = append(result, common.NewInstruction(common.OpJumpIfFalse, size, 0))
 
 	return result, errors.EmptyError
+}
+
+func (c *PackageCompiler) compile_tripartite_loop_predicate(predicate parser.TripartiteLoopPredicate, size int) (common.InstructionSet, common.InstructionSet, errors.Error) {
+	start := common.InstructionSet{}
+	end := common.InstructionSet{}
+
+	var instructions common.InstructionSet
+	var err errors.Error
+
+	if predicate.Declaration != nil {
+		instructions, err = c.compile_statement(predicate.Declaration)
+		if err.Exists {
+			return start, end, err
+		}
+
+		start = append(start, instructions...)
+	}
+
+	instructions, err = c.compile_expression(predicate.Predicate, false)
+	if err.Exists {
+		return start, end, err
+	}
+
+	start = append(start, instructions...)
+
+	if predicate.Procedure != nil {
+		instructions, err = c.compile_expression(*predicate.Procedure, false)
+		if err.Exists {
+			return start, end, err
+		}
+
+		end = append(end, instructions...)
+	}
+
+	return start, end, errors.EmptyError
 }
 
 func (c *PackageCompiler) compile_expression(expression parser.Expression, should_clean bool) (common.InstructionSet, errors.Error) {
@@ -367,7 +484,7 @@ func (c *PackageCompiler) compile_arithmetic_expression(expression parser.Arithm
 	result = append(result, left...)
 	result = append(result, right...)
 
-	switch expression.Operator {
+	switch expression.Operator.Literal {
 	case "+":
 		result = append(result, common.NewInstruction(common.OpAdd))
 	case "-":
@@ -395,7 +512,7 @@ func (c *PackageCompiler) compile_binary_expression(expression parser.BinaryExpr
 		return result, err
 	}
 
-	if expression.Operator == "<" || expression.Operator == "<=" {
+	if expression.Operator.Literal == "<" || expression.Operator.Literal == "<=" {
 		result = append(result, right...)
 		result = append(result, left...)
 	} else {
@@ -403,7 +520,7 @@ func (c *PackageCompiler) compile_binary_expression(expression parser.BinaryExpr
 		result = append(result, right...)
 	}
 
-	switch expression.Operator {
+	switch expression.Operator.Literal {
 	case ">", "<":
 		result = append(result, common.NewInstruction(common.OpGreaterThan))
 	case ">=", "<=":
@@ -478,13 +595,21 @@ func (c *PackageCompiler) compile_member_expression(expression parser.MemberExpr
 func (c *PackageCompiler) compile_call_expression(expression parser.CallExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
+	for _, argument := range expression.Arguments {
+		instructions, err := c.compile_expression(argument, false)
+		if err.Exists {
+			return result, err
+		}
+		result = append(result, instructions...)
+	}
+
 	callee, err := c.compile_expression(expression.Callee, false)
 	if err.Exists {
 		return result, err
 	}
 
 	result = append(result, callee...)
-	result = append(result, common.NewInstruction(common.OpCall))
+	result = append(result, common.NewInstruction(common.OpCall, len(expression.Arguments)))
 
 	return result, errors.EmptyError
 }

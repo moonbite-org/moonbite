@@ -16,10 +16,11 @@ const (
 )
 
 type Symbol struct {
-	Name  string
-	Scope SymbolScope
-	Index int
-	Kind  parser.VarKind
+	Name   string
+	Scope  SymbolScope
+	Index  int
+	Kind   parser.VarKind
+	Hidden bool
 }
 
 type SymbolTable struct {
@@ -29,11 +30,18 @@ type SymbolTable struct {
 	count int
 }
 
-func (t *SymbolTable) Define(name string, kind parser.VarKind) Symbol {
+func (t *SymbolTable) Define(name string, kind parser.VarKind, hidden bool) (Symbol, error) {
+	_, exists := t.store[name]
+
+	if exists {
+		return Symbol{}, fmt.Errorf("cannot redeclare variable '%s' on the same block", name)
+	}
+
 	symbol := Symbol{
-		Name:  name,
-		Index: t.count,
-		Kind:  kind,
+		Name:   name,
+		Index:  t.count,
+		Kind:   kind,
+		Hidden: hidden,
 	}
 
 	if t.Outer == nil {
@@ -45,7 +53,7 @@ func (t *SymbolTable) Define(name string, kind parser.VarKind) Symbol {
 	t.count++
 	t.store[name] = symbol
 
-	return symbol
+	return symbol, nil
 }
 
 func (t SymbolTable) Resolve(name string) *Symbol {

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"slices"
+	"strings"
 
 	errors "github.com/moonbite-org/moonbite/error"
 	parser "github.com/moonbite-org/moonbite/parser/cmd"
@@ -51,22 +52,23 @@ func ParseConfig(config_path string) (ModConfig, error) {
 type Compiler struct {
 	RootDir string
 	Config  ModConfig
-	Modules map[string]Module
+	Modules map[string]*Module
 }
 
 func New(dir string) Compiler {
 	return Compiler{
 		RootDir: dir,
-		Modules: map[string]Module{},
+		Modules: map[string]*Module{},
 	}
 }
 
 var allowed_extensions = []string{".mb"}
 
-func resolve_dir(dir string, is_root bool) (map[string]Module, error) {
-	result := map[string]Module{}
+func resolve_dir(dir string, is_root bool) (map[string]*Module, error) {
+	result := map[string]*Module{}
 	mod := Module{
-		Dir: dir,
+		Dir:    dir,
+		IsRoot: is_root,
 	}
 	entries, err := os.ReadDir(dir)
 
@@ -78,6 +80,10 @@ func resolve_dir(dir string, is_root bool) (map[string]Module, error) {
 		entry_path := path.Join(dir, entry.Name())
 
 		if entry.Type().IsDir() {
+			if strings.HasPrefix(entry_path, ".") {
+				continue
+			}
+
 			sub_modules, err := resolve_dir(entry_path, false)
 
 			if err != nil {
@@ -97,9 +103,9 @@ func resolve_dir(dir string, is_root bool) (map[string]Module, error) {
 	}
 
 	if is_root {
-		result["root"] = mod
+		result["root"] = &mod
 	} else {
-		result[path.Base(dir)] = mod
+		result[path.Base(dir)] = &mod
 	}
 
 	return result, nil
@@ -128,21 +134,24 @@ func (c *Compiler) Compile() errors.Error {
 	}
 
 	c.Modules = modules
+	root := modules["root"]
 
-	if len(modules["root"].FilePaths) == 0 {
+	if len(root.FilePaths) == 0 {
 		return errors.CreateAnonError(errors.CompileError, "no root module found")
 	}
 
-	return modules["root"].Compile()
+	return root.Compile()
 }
 
 type Module struct {
 	PackageName string
 	Dir         string
 	FilePaths   []string
+	IsRoot      bool
+	Compiler    PackageCompiler
 }
 
-func (m Module) Compile() errors.Error {
+func (m *Module) Compile() errors.Error {
 	definitions := []parser.Definition{}
 
 	for _, file_path := range m.FilePaths {
@@ -167,9 +176,9 @@ func (m Module) Compile() errors.Error {
 		definitions = append(definitions, ast.Definitions...)
 	}
 
-	compiler := NewPackageCompiler(definitions)
+	m.Compiler = NewPackageCompiler(definitions, m.IsRoot)
 
-	if err := compiler.Compile(); err.Exists {
+	if err := m.Compiler.Compile(); err.Exists {
 		return err
 	}
 
