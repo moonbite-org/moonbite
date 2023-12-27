@@ -998,70 +998,144 @@ func (c *PackageCompiler) compile_match_self_expression(expression parser.MatchS
 	return c.current_match_target, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_match_block(block parser.PredicateBlock, is_last bool) (common.InstructionSet, errors.Error) {
-	result := common.InstructionSet{}
-	template := common.NewInstruction(common.OpJump, 0, 0)
+type match_block struct {
+	predicate common.InstructionSet
+	body      common.InstructionSet
+}
+
+func (c *PackageCompiler) compile_match_block(block parser.PredicateBlock, base_exists bool) (match_block, errors.Error) {
+	// To reliably measure the sizes of the blocks later, dummy jump instructions are added
+	result := match_block{
+		predicate: common.InstructionSet{},
+		body:      common.InstructionSet{},
+	}
 
 	predicate, err := c.compile_expression(block.Predicate, false)
 	if err.Exists {
 		return result, err
 	}
 
-	result = append(result, predicate...)
+	predicate = append(predicate, common.NewInstruction(common.OpNegate))
+	result.predicate = append(result.predicate, predicate...)
 
-	body := common.InstructionSet{}
 	for _, sub_statement := range block.Body {
 		instructions, err := c.compile_statement(sub_statement)
 		if err.Exists {
 			return result, err
 		}
-		body = append(body, instructions...)
+		result.body = append(result.body, instructions...)
 	}
 
-	jump_count := 0
+	result.predicate = append(result.predicate, common.NewInstruction(common.OpJumpIfFalse, 0, 0))
 
-	if is_last {
-		jump_count = body.GetSize() + template.GetSize()
-	} else {
-		jump_count = body.GetSize()
+	if base_exists {
+		// if predicate is false this part will run at the end of the predicate
+		false_ := c.ConstantPool.Add(common.Uint32Object{Value: 0})
+		result.predicate = append(result.predicate, common.NewInstruction(common.OpConstant, false_))
+
+		// if predicate is true this part will run at the end of the body
+		true_ := c.ConstantPool.Add(common.Uint32Object{Value: 1})
+		result.body = append(result.body, common.NewInstruction(common.OpConstant, true_))
 	}
 
-	result = append(result, common.NewInstruction(common.OpJumpIfFalse, jump_count, 0))
-	result = append(result, body...)
+	result.body = append(result.body, common.NewInstruction(common.OpJump, 0, 1))
 
 	return result, errors.EmptyError
 }
 
 func (c *PackageCompiler) compile_match_expression(expression parser.MatchExpression) (common.InstructionSet, errors.Error) {
+	/* this works by putting the predicates one after the other
+	and the bodies after them with order. When a predicate is executed
+	it will jump to its body and in the end it will push either a 0 or 1
+	depending on if its condition was true or not. In between the predicates
+	and the bodies there is a block that will check if all the added values
+	add up to 0, basically meaning no condition was met. If so it will jump to
+	the base block, if not it will jump out. Because all the bodies jump back
+	to their predicates, this in between block will be the last thing that is run.
+	*/
 	result := common.InstructionSet{}
+	blocks := []match_block{}
+	base_exists := len(expression.BaseBlock) != 0
 
 	against, err := c.compile_expression(expression.Against, false)
 	if err.Exists {
-		return result, err
+		return common.InstructionSet{}, err
 	}
+
+	previous_match_target := c.current_match_target
 	c.current_match_target = against
 
-	for i, block := range expression.Blocks {
-		block, err := c.compile_match_block(block, i == len(expression.Blocks)-1 && len(expression.BaseBlock) > 0)
+	for _, block := range expression.Blocks {
+		match_block, err := c.compile_match_block(block, base_exists)
 		if err.Exists {
 			return result, err
 		}
-		result = append(result, block...)
+		blocks = append(blocks, match_block)
 	}
 
-	base_block := common.InstructionSet{}
-	if len(expression.BaseBlock) > 0 {
-		for _, sub_statement := range expression.BaseBlock {
-			instructions, err := c.compile_statement(sub_statement)
-			if err.Exists {
-				return result, err
-			}
-			base_block = append(base_block, instructions...)
+	base_predicate := common.InstructionSet{}
+	if base_exists {
+		/* reduce the accumulated values by adding them up
+		 basically if there were 4 predicates, 4 values would
+		would accumulate here, running the add instruction n - 1
+		times will reduce them into a single value */
+		for i := 0; i < len(blocks)-1; i++ {
+			base_predicate = append(base_predicate, common.NewInstruction(common.OpAdd))
 		}
 
-		result = append(result, common.NewInstruction(common.OpJump, base_block.GetSize(), 0))
-		result = append(result, base_block...)
+		// if the reduced value is 0, all predicates failed so jump to the base block otherwise jump out
+		false_ := c.ConstantPool.Add(common.Uint32Object{Value: 0})
+		base_predicate = append(base_predicate, common.NewInstruction(common.OpConstant, false_))
+		base_predicate = append(base_predicate, common.NewInstruction(common.OpJumpIfFalse, 0, 0))
+		base_predicate = append(base_predicate, common.NewInstruction(common.OpJump, 0, 0))
 	}
 
-	return result, errors.EmptyError
+	c.current_match_target = previous_match_target
+
+	base_jump_size := 0
+	// figure out the actual jump counts for conditions
+	for i, block := range blocks {
+		base_jump_size += block.body.GetSize()
+		predicate_jump_size := 0
+
+		/* a predicate's jump size is the size of the predicates
+		after it + bodies before it + base predicate's size */
+		for _, consecutive_block := range blocks[i+1:] {
+			predicate_jump_size += consecutive_block.predicate.GetSize()
+		}
+		predicate_jump_size += base_predicate.GetSize()
+		for _, previous_block := range blocks[0:i] {
+			predicate_jump_size += previous_block.body.GetSize()
+		}
+
+		jump_template := common.NewInstruction(common.OpJump, 0, 0)
+		constant_template := common.NewInstruction(common.OpConstant, 0)
+		/* the body's jump size is the predicate's jump size +
+		the body's own size. Predicate includes a jump at the
+		end so we will remove that. A jump instruction size is 19 */
+		body_jump_size := predicate_jump_size + block.body.GetSize() - jump_template.GetSize()
+		/* jump the last constant that pushes 0 onto the stack as well.
+		This is a constant instruction that has the size 5 */
+		predicate_jump_size += constant_template.GetSize()
+
+		// replace the jumps
+		block.predicate[len(block.predicate)-2] = common.NewInstruction(common.OpJumpIfFalse, predicate_jump_size, 0)
+		block.body[len(block.body)-1] = common.NewInstruction(common.OpJump, body_jump_size, 1)
+
+		result = append(result, block.predicate...)
+	}
+
+	if base_exists {
+		// figure out the actual jump counts for exiting
+		base_predicate[len(base_predicate)-2] = common.NewInstruction(common.OpJumpIfFalse, base_jump_size+base_predicate.GetSize(), 0)
+		base_predicate[len(base_predicate)-1] = common.NewInstruction(common.OpJump, base_jump_size, 0)
+
+		result = append(result, base_predicate...)
+	}
+
+	for _, block := range blocks {
+		result = append(result, block.body...)
+	}
+
+	return result, err
 }
