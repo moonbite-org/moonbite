@@ -55,6 +55,7 @@ const (
 	GiveupExpressionKind          ExpressionKind = "expression:giveup"
 	CoroutFunExpressionKind       ExpressionKind = "expression:corout_fun"
 	GenFunExpressionKind          ExpressionKind = "expression:gen_fun"
+	WarnExpressionKind            ExpressionKind = "expression:warn"
 
 	// literal expressions
 	StringLiteralExpressionKind   ExpressionKind = "expression:string-literal"
@@ -1194,5 +1195,20 @@ func (e GenFunExpression) Kind() ExpressionKind {
 }
 
 func (e GenFunExpression) Location() errors.Location {
+	return e.location
+}
+
+type WarnExpression struct {
+	Kind_ ExpressionKind `json:"kind"`
+
+	Argument Expression
+	location errors.Location
+}
+
+func (e WarnExpression) Kind() ExpressionKind {
+	return WarnExpressionKind
+}
+
+func (e WarnExpression) Location() errors.Location {
 	return e.location
 }

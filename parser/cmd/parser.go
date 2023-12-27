@@ -1549,16 +1549,33 @@ func (p *parser_s) parse_group_expression() Expression {
 func (p *parser_s) parse_call_expression() Expression {
 	defer p.catch()
 
+	location := p.current_token().Location
 	if !p.is_left_callable(p.current_expression()) {
 		p.throw(errors.ErrorMessages["uc_con"])
 	}
 	args := parse_seperated_list(p, p.parse_expression, comma, left_parens, right_parens, true, false)
 
+	if p.current_expression().Kind() == IdentifierExpressionKind {
+		if p.current_expression().(IdentifierExpression).Value == "warn" {
+			if len(args) != 1 {
+				defer p.throw(errors.ErrorMessages["w_e_args"], location)
+			}
+
+			p.set_current_expression(WarnExpression{
+				Kind_:    WarnExpressionKind,
+				Argument: args[0],
+
+				location: location,
+			})
+			return p.continue_expression()
+		}
+	}
+
 	p.set_current_expression(CallExpression{
 		Callee:    p.current_expression(),
 		Arguments: args,
 		Kind_:     CallExpressionKind,
-		location:  p.current_token().Location,
+		location:  location,
 	})
 
 	return p.continue_expression()

@@ -8,21 +8,25 @@ import (
 	errors "github.com/moonbite-org/moonbite/error"
 )
 
-func (p *parser_s) throw(reason string) {
+func (p *parser_s) throw(reason string, l ...errors.Location) {
 	var location errors.Location
 	current := p.current_token()
 
-	if current.Kind == eof_token_kind {
-		split := strings.Split(string(p.input), "\n")
-		last_line := len(split)
-		last_col := len(split[len(split)-1]) + 1
-
-		location = errors.Location{
-			Start: errors.Position{Line: last_line, Column: last_col},
-			End:   errors.Position{Line: last_line, Column: last_col},
-		}
+	if len(l) != 0 {
+		location = l[0]
 	} else {
-		location = current.Location
+		if current.Kind == eof_token_kind {
+			split := strings.Split(string(p.input), "\n")
+			last_line := len(split)
+			last_col := len(split[len(split)-1]) + 1
+
+			location = errors.Location{
+				Start: errors.Position{Line: last_line, Column: last_col},
+				End:   errors.Position{Line: last_line, Column: last_col},
+			}
+		} else {
+			location = current.Location
+		}
 	}
 
 	p.error = errors.Error{
