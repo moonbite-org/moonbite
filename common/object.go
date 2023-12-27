@@ -459,7 +459,7 @@ func (p ConstantPool) Has(value Object) int {
 			return -1
 		}
 
-		if reflect.TypeOf(v.GetValue()) == reflect.TypeOf(InstructionSet{}) {
+		if reflect.TypeOf(value.GetValue()) == reflect.TypeOf(InstructionSet{}) {
 			return -1
 		}
 
