@@ -1,0 +1,34 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Go
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+
+    - name: Build Parser
+      run: cd parser && go build -ldflags "-s -w" -o ../dist/moonp && cd ..
+
+    - name: Build Compiler
+      run: cd compiler && go build -ldflags "-s -w" -o ../dist/moonc && cd ..
+
+    - name: Test Parser
+      run: go test -v ./parser/cmd
+
+    - name: Test Compiler
+      run: go test -v ./compiler/cmd
