@@ -5,14 +5,14 @@ tasks:
     cmds:
       - task test-parser
       - task test-typechecker
-      # - task test-vm
-      # - task test-compiler
+      - task test-vm
+      - task test-compiler
   coverage:
     cmds:
       - task coverage-parser
       - task coverage-typechecker
-      # - task coverage-vm
-      # - task coverage-compiler
+      - task coverage-vm
+      - task coverage-compiler
   coverage-parser:
     cmds:
       - go test -coverprofile=./coverage/parser.out -v ./parser/cmd
@@ -37,15 +37,25 @@ tasks:
   test-typechecker:
     cmds:
       - go test -v ./typechecker
+  coverage-compiler:
+    cmds:
+      - go test -coverprofile=./coverage/compiler.out -v ./compiler
+      - go tool cover -o ./coverage/compiler.html -html=./coverage/compiler.out
+      - rm ./coverage/compiler.out
+  test-compiler:
+    cmds:
+      - go test -v ./compiler
   build-prod:
     cmds:
       - rm -rf dist
       - task build-parser-prod
+      - task build-compiler-prod
       # - task build-vm-prod
       - task zip
   build:
     cmds:
       - task build-parser
+      - task build-compiler
       # - task build-vm
   build-parser-prod:
     cmds:
@@ -59,19 +69,7 @@ tasks:
   build-parser:
     cmds:
       - cd parser && go build -ldflags "-s -w" -o ../dist/moonp && cd ..
-  build-vm-prod:
-    cmds:
-      - cd vm && GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ../dist/mb_osx_arm64 && cd ..
-      - cd vm && GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/mb_osx_amd64 && cd ..
-      - cd vm && GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o ../dist/mb_linux_arm64.elf && cd ..
-      - cd vm && GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/mb_linux_amd64.elf && cd ..
-      - cd vm && GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/mb_win.exe && cd ..
-      - cd vm && GOOS=js GOARCH=wasm go build -o ../dist/mb_js.wasm && cd ..
-      - cd vm && GOOS=wasip1 GOARCH=wasm go build -o ../dist/mb_wasi.wasm && cd ..
-  build-vm:
-    cmds:
-      - cd vm && go build -ldflags "-s -w" -o ../dist/mb && cd ..
-  # build-compiler-prod:
+  # build-vm-prod:
   #   cmds:
   #     - cd vm && GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ../dist/mb_osx_arm64 && cd ..
   #     - cd vm && GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/mb_osx_amd64 && cd ..
@@ -80,6 +78,18 @@ tasks:
   #     - cd vm && GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/mb_win.exe && cd ..
   #     - cd vm && GOOS=js GOARCH=wasm go build -o ../dist/mb_js.wasm && cd ..
   #     - cd vm && GOOS=wasip1 GOARCH=wasm go build -o ../dist/mb_wasi.wasm && cd ..
+  # build-vm:
+  #   cmds:
+  #     - cd vm && go build -ldflags "-s -w" -o ../dist/mb && cd ..
+  build-compiler-prod:
+    cmds:
+      - cd compiler && GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ../dist/moonc_osx_arm64 && cd ..
+      - cd compiler && GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/moonc_osx_amd64 && cd ..
+      - cd compiler && GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o ../dist/moonc_linux_arm64.elf && cd ..
+      - cd compiler && GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/moonc_linux_amd64.elf && cd ..
+      - cd compiler && GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ../dist/moonc_win.exe && cd ..
+      - cd compiler && GOOS=js GOARCH=wasm go build -o ../dist/moonc_js.wasm && cd ..
+      - cd compiler && GOOS=wasip1 GOARCH=wasm go build -o ../dist/moonc_wasi.wasm && cd ..
   build-compiler:
     cmds:
       - cd compiler && go build -ldflags "-s -w" -o ../dist/moonc && cd ..
