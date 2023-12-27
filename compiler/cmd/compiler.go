@@ -605,6 +605,10 @@ func (c *PackageCompiler) compile_expression(expression parser.Expression, shoul
 		result, err = c.compile_match_self_expression(expression.(parser.MatchSelfExpression))
 	case parser.MatchExpressionKind:
 		result, err = c.compile_match_expression(expression.(parser.MatchExpression))
+	case parser.CoroutFunExpressionKind:
+		result, err = c.compile_corout_fun_expression(expression.(parser.CoroutFunExpression))
+	case parser.GenFunExpressionKind:
+		result, err = c.compile_gen_fun_expression(expression.(parser.GenFunExpression))
 	default:
 		result = append(result, common.NewInstruction(common.OpNoop))
 	}
@@ -1138,4 +1142,38 @@ func (c *PackageCompiler) compile_match_expression(expression parser.MatchExpres
 	}
 
 	return result, err
+}
+
+func (c *PackageCompiler) compile_corout_fun_expression(expression parser.CoroutFunExpression) (common.InstructionSet, errors.Error) {
+	literal := parser.InstanceLiteralExpression{
+		Type: parser.TypeIdentifier{
+			Name:     parser.IdentifierExpression{Value: "Corout"},
+			Generics: map[int]parser.TypeLiteral{},
+		},
+		Value: []parser.KeyValueEntry{
+			{
+				Key:   parser.IdentifierExpression{Value: "fun"},
+				Value: expression.Fun,
+			},
+		},
+	}
+
+	return c.compile_literal_expression(literal)
+}
+
+func (c *PackageCompiler) compile_gen_fun_expression(expression parser.GenFunExpression) (common.InstructionSet, errors.Error) {
+	literal := parser.InstanceLiteralExpression{
+		Type: parser.TypeIdentifier{
+			Name:     parser.IdentifierExpression{Value: "Generator"},
+			Generics: map[int]parser.TypeLiteral{},
+		},
+		Value: []parser.KeyValueEntry{
+			{
+				Key:   parser.IdentifierExpression{Value: "fun"},
+				Value: expression.Fun,
+			},
+		},
+	}
+
+	return c.compile_literal_expression(literal)
 }

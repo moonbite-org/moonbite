@@ -56,6 +56,27 @@ func (t *SymbolTable) Define(name string, kind parser.VarKind, hidden bool) (Sym
 	return symbol, nil
 }
 
+func (t *SymbolTable) DefineBuiltin(name string) (Symbol, error) {
+	_, exists := t.store[name]
+
+	if exists {
+		return Symbol{}, fmt.Errorf("cannot define builtin '%s' again", name)
+	}
+
+	symbol := Symbol{
+		Name:   name,
+		Index:  t.count,
+		Kind:   parser.ConstantKind,
+		Hidden: false,
+		Scope:  BuiltinScope,
+	}
+
+	t.count++
+	t.store[name] = symbol
+
+	return symbol, nil
+}
+
 func (t SymbolTable) Resolve(name string) *Symbol {
 	symbol, ok := t.store[name]
 

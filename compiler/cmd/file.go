@@ -6,6 +6,8 @@ import (
 	parser "github.com/moonbite-org/moonbite/parser/cmd"
 )
 
+var builtins = []string{"print", "exit"}
+
 type PackageCompiler struct {
 	PackageName          string
 	IsRoot               bool
@@ -19,8 +21,8 @@ type PackageCompiler struct {
 }
 
 func (c *PackageCompiler) Compile() errors.Error {
-	for _, builtin := range common.Builtins {
-		c.SymbolTable.Define(builtin.Name, parser.ConstantKind, false)
+	for _, builtin := range builtins {
+		c.SymbolTable.DefineBuiltin(builtin)
 	}
 
 	for _, definition := range c.Definitions {
