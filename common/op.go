@@ -17,6 +17,7 @@ const (
 	OpGet
 	OpSetLocal
 	OpGetLocal
+	OpGetBuiltin
 	OpAssign
 	OpAssignLocal
 	OpSetItem
@@ -59,6 +60,7 @@ var op_map = map[Op]string{
 	OpGet:                "Get",
 	OpSetLocal:           "SetLocal",
 	OpGetLocal:           "GetLocal",
+	OpGetBuiltin:         "GetBuiltin",
 	OpAssign:             "Assign",
 	OpAssignLocal:        "AssignLocal",
 	OpSetItem:            "SetItem",

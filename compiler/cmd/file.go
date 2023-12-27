@@ -6,7 +6,7 @@ import (
 	parser "github.com/moonbite-org/moonbite/parser/cmd"
 )
 
-var builtins = []string{"print", "exit"}
+var builtins = []string{"print", "exit", "null"}
 
 type PackageCompiler struct {
 	PackageName          string

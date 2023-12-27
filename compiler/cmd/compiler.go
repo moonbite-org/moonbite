@@ -264,6 +264,8 @@ func (c *PackageCompiler) compile_unbound_fun_definition_statement(statement par
 
 	c.enter_scope()
 
+	c.SymbolTable.Define("#warning", parser.VariableKind, false)
+
 	for _, parameter := range statement.Signature.Parameters {
 		c.SymbolTable.Define(parameter.Name.Value, parser.ConstantKind, false)
 	}
@@ -312,6 +314,7 @@ func (c *PackageCompiler) compile_bound_fun_definition_statement(statement parse
 
 	c.enter_scope()
 
+	c.SymbolTable.Define("#warning", parser.VariableKind, false)
 	c.SymbolTable.Define("this", parser.ConstantKind, false)
 	for _, parameter := range statement.Signature.Parameters {
 		c.SymbolTable.Define(parameter.Name.Value, parser.ConstantKind, false)
@@ -471,8 +474,10 @@ func (c *PackageCompiler) compile_if_statement(statement parser.IfStatement) (co
 		else_block = append(else_block, instructions...)
 	}
 
-	result = append(result, common.NewInstruction(common.OpJump, else_block.GetSize(), 0))
-	result = append(result, else_block...)
+	if else_block.GetSize() > 0 {
+		result = append(result, common.NewInstruction(common.OpJump, else_block.GetSize(), 0))
+		result = append(result, else_block...)
+	}
 
 	return result, errors.EmptyError
 }
@@ -595,6 +600,12 @@ func (c *PackageCompiler) compile_expression(expression parser.Expression, shoul
 		result, err = c.compile_member_expression(expression.(parser.MemberExpression))
 	case parser.CallExpressionKind:
 		result, err = c.compile_call_expression(expression.(parser.CallExpression))
+	case parser.WarnExpressionKind:
+		result, err = c.compile_warn_expression(expression.(parser.WarnExpression))
+	case parser.CaretExpressionKind:
+		result, err = c.compile_caret_expression(expression.(parser.CaretExpression))
+	case parser.OrExpressionKind:
+		result, err = c.compile_or_expression(expression.(parser.OrExpression))
 	case parser.InstanceofExpressionKind:
 		result, err = c.compile_instanceof_expression(expression.(parser.InstanceofExpression))
 	case parser.TypeCastExpressionKind:
@@ -641,7 +652,7 @@ func (c *PackageCompiler) compile_literal_expression(expression parser.LiteralEx
 		result = append(result, common.NewInstruction(common.OpConstant, index))
 	case parser.RuneLiteralKind:
 		value := expression.(parser.RuneLiteralExpression).Value
-		index := c.ConstantPool.Add(common.RuneObject{
+		index := c.ConstantPool.Add(common.Int32Object{
 			Value: value,
 		})
 
@@ -710,6 +721,7 @@ func (c *PackageCompiler) compile_fun_expression(expression parser.AnonymousFunE
 
 	c.enter_scope()
 
+	c.SymbolTable.Define("#warning", parser.VariableKind, false)
 	for _, parameter := range expression.Signature.Parameters {
 		c.SymbolTable.Define(parameter.Name.Value, parser.ConstantKind, false)
 	}
@@ -897,6 +909,8 @@ func (c *PackageCompiler) compile_identifier_expression(expression parser.Identi
 
 	if symbol.Scope == GlobalScope {
 		result = append(result, common.NewInstruction(common.OpGet, symbol.Index))
+	} else if symbol.Scope == BuiltinScope {
+		result = append(result, common.NewInstruction(common.OpGetBuiltin, symbol.Index))
 	} else {
 		result = append(result, common.NewInstruction(common.OpGetLocal, symbol.Index))
 	}
@@ -1176,4 +1190,68 @@ func (c *PackageCompiler) compile_gen_fun_expression(expression parser.GenFunExp
 	}
 
 	return c.compile_literal_expression(literal)
+}
+
+func (c *PackageCompiler) compile_warn_expression(expression parser.WarnExpression) (common.InstructionSet, errors.Error) {
+	result := common.InstructionSet{}
+
+	assignment, err := c.compile_assignment_statement(parser.AssignmentStatement{
+		LeftHandSide:  parser.IdentifierExpression{Value: "#warning"},
+		RightHandSide: expression.Argument,
+		Operator: parser.OperatorToken{
+			Literal: "=",
+		},
+	})
+	if err.Exists {
+		return result, err
+	}
+
+	result = append(result, assignment...)
+	result = append(result, common.NewInstruction(common.OpReturn))
+
+	return result, errors.EmptyError
+}
+
+func (c *PackageCompiler) compile_caret_expression(expression parser.CaretExpression) (common.InstructionSet, errors.Error) {
+	return c.compile_identifier_expression(parser.IdentifierExpression{
+		Value: "#warning",
+	})
+}
+
+func (c *PackageCompiler) compile_or_expression(expression parser.OrExpression) (common.InstructionSet, errors.Error) {
+	result := common.InstructionSet{}
+
+	left, err := c.compile_expression(expression.LeftHandSide, false)
+	if err.Exists {
+		return result, err
+	}
+	result = append(result, left...)
+
+	right, err := c.compile_expression(expression.RightHandSide, false)
+	if err.Exists {
+		return result, err
+	}
+
+	comparison, err := c.compile_expression(parser.ComparisonExpression{
+		LeftHandSide:  parser.IdentifierExpression{Value: "#warning"},
+		RightHandSide: parser.IdentifierExpression{Value: "null"},
+		Operator: parser.OperatorToken{
+			Literal: "!=",
+		},
+	}, false)
+	if err.Exists {
+		return result, err
+	}
+
+	result = append(result, comparison...)
+	or := common.InstructionSet{}
+	// if left hand side raises a warning, pop the value from function call
+	or = append(or, common.NewInstruction(common.OpPop))
+	or = append(or, right...)
+
+	// prepend a jump to the or set
+	or = append(common.InstructionSet{common.NewInstruction(common.OpJumpIfFalse, or.GetSize(), 0)}, or...)
+	result = append(result, or...)
+
+	return result, errors.EmptyError
 }
