@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	parser "github.com/moonbite-org/moonbite/parser/cmd"
@@ -10,42 +11,44 @@ import (
 type ObjectKind string
 
 const (
-	StringObjectKind  ObjectKind = "object:string"
-	RuneObjectKind    ObjectKind = "object:rune"
-	BoolObjectKind    ObjectKind = "object:bool"
-	Uint8ObjectKind   ObjectKind = "object:uint8"
-	Uint16ObjectKind  ObjectKind = "object:uint16"
-	Uint32ObjectKind  ObjectKind = "object:uint32"
-	Uint64ObjectKind  ObjectKind = "object:uint64"
-	Int8ObjectKind    ObjectKind = "object:int8"
-	Int16ObjectKind   ObjectKind = "object:int16"
-	Int32ObjectKind   ObjectKind = "object:int32"
-	Int64ObjectKind   ObjectKind = "object:int64"
-	Float32ObjectKind ObjectKind = "object:float32"
-	Float64ObjectKind ObjectKind = "object:float64"
-	ListObjectKind    ObjectKind = "object:list"
-	MapObjectKind     ObjectKind = "object:map"
-	FunObjectKind     ObjectKind = "object:fun"
-	terminator_kind   ObjectKind = "object:terminator"
-	pool_block_kind   ObjectKind = "object:pool"
+	StringObjectKind   ObjectKind = "object:string"
+	RuneObjectKind     ObjectKind = "object:rune"
+	BoolObjectKind     ObjectKind = "object:bool"
+	Uint8ObjectKind    ObjectKind = "object:uint8"
+	Uint16ObjectKind   ObjectKind = "object:uint16"
+	Uint32ObjectKind   ObjectKind = "object:uint32"
+	Uint64ObjectKind   ObjectKind = "object:uint64"
+	Int8ObjectKind     ObjectKind = "object:int8"
+	Int16ObjectKind    ObjectKind = "object:int16"
+	Int32ObjectKind    ObjectKind = "object:int32"
+	Int64ObjectKind    ObjectKind = "object:int64"
+	Float32ObjectKind  ObjectKind = "object:float32"
+	Float64ObjectKind  ObjectKind = "object:float64"
+	ListObjectKind     ObjectKind = "object:list"
+	MapObjectKind      ObjectKind = "object:map"
+	InstanceObjectKind ObjectKind = "object:instance"
+	FunObjectKind      ObjectKind = "object:fun"
+	terminator_kind    ObjectKind = "object:terminator"
+	pool_block_kind    ObjectKind = "object:pool"
 )
 
 var type_map = map[ObjectKind]byte{
-	StringObjectKind: 12,
-	BoolObjectKind:   13,
-	Uint8ObjectKind:  15,
-	Uint16ObjectKind: 16,
-	Uint32ObjectKind: 17,
-	Uint64ObjectKind: 18,
-	Int8ObjectKind:   19,
-	Int16ObjectKind:  20,
-	Int32ObjectKind:  21,
-	Int64ObjectKind:  22,
-	ListObjectKind:   23,
-	MapObjectKind:    24,
-	FunObjectKind:    25,
-	pool_block_kind:  126,
-	terminator_kind:  0,
+	StringObjectKind:   12,
+	BoolObjectKind:     13,
+	Uint8ObjectKind:    15,
+	Uint16ObjectKind:   16,
+	Uint32ObjectKind:   17,
+	Uint64ObjectKind:   18,
+	Int8ObjectKind:     19,
+	Int16ObjectKind:    20,
+	Int32ObjectKind:    21,
+	Int64ObjectKind:    22,
+	ListObjectKind:     23,
+	MapObjectKind:      24,
+	InstanceObjectKind: 25,
+	FunObjectKind:      26,
+	pool_block_kind:    126,
+	terminator_kind:    0,
 }
 
 type Object interface {
@@ -350,6 +353,34 @@ func (o MapObject) Serialize() []byte {
 	return result
 }
 
+type InstanceObject struct {
+	Value []struct {
+		Key   Object
+		Value Object
+	}
+}
+
+func (o InstanceObject) Kind() ObjectKind {
+	return InstanceObjectKind
+}
+
+func (o InstanceObject) GetValue() interface{} {
+	return o.Value
+}
+
+func (o InstanceObject) Serialize() []byte {
+	result := []byte{type_map[o.Kind()]}
+
+	for _, entry := range o.Value {
+		result = append(result, entry.Key.Serialize()...)
+		result = append(result, entry.Value.Serialize()...)
+	}
+
+	result = append(result, type_map[terminator_kind])
+
+	return result
+}
+
 type FunctionObject struct {
 	Value InstructionSet
 }
@@ -427,6 +458,11 @@ func (p ConstantPool) Has(value Object) int {
 		if v == nil {
 			return -1
 		}
+
+		if reflect.TypeOf(v.GetValue()) == reflect.TypeOf(InstructionSet{}) {
+			return -1
+		}
+
 		if v.GetValue() == value.GetValue() {
 			return i
 		}

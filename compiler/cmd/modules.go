@@ -176,7 +176,7 @@ func (m *Module) Compile() errors.Error {
 		definitions = append(definitions, ast.Definitions...)
 	}
 
-	m.Compiler = NewPackageCompiler(definitions, m.IsRoot)
+	m.Compiler = NewPackageCompiler(m.PackageName, definitions, m.IsRoot)
 
 	if err := m.Compiler.Compile(); err.Exists {
 		return err

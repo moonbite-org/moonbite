@@ -48,6 +48,7 @@ const (
 	OpGreaterThan
 	OpGreaterThanOrEqual
 	OpInstanceof
+	OpCast
 	OpExit
 )
 

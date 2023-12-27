@@ -7,14 +7,15 @@ import (
 )
 
 type PackageCompiler struct {
+	PackageName          string
 	IsRoot               bool
 	Definitions          []parser.Definition
 	SymbolTable          *SymbolTable
+	TypeSymbolTable      map[string]*SymbolTable
 	ConstantPool         common.ConstantPool
 	Typechecker          DummyTypeChecker
 	Instructions         common.InstructionSet
 	current_match_target common.InstructionSet
-	current_this_target  common.InstructionSet
 }
 
 func (c *PackageCompiler) Compile() errors.Error {
@@ -53,13 +54,16 @@ func (c PackageCompiler) GetBytes() []byte {
 	return result
 }
 
-func NewPackageCompiler(definitions []parser.Definition, is_root bool) PackageCompiler {
+func NewPackageCompiler(package_ string, definitions []parser.Definition, is_root bool) PackageCompiler {
 	return PackageCompiler{
-		Definitions: definitions,
-		SymbolTable: NewSymbolTable(),
+		PackageName:     package_,
+		Definitions:     definitions,
+		SymbolTable:     NewSymbolTable(),
+		TypeSymbolTable: map[string]*SymbolTable{},
 		ConstantPool: common.ConstantPool{
 			Values: [1024]common.Object{},
 		},
-		IsRoot: is_root,
+		IsRoot:               is_root,
+		current_match_target: nil,
 	}
 }
