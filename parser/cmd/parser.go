@@ -1448,6 +1448,9 @@ func (p *parser_s) continue_expression() Expression {
 		} else {
 			return p.continue_expression()
 		}
+	case multi_line_comment:
+		p.advance()
+		return p.continue_expression()
 	case new_line:
 		return exit()
 	default:
@@ -1549,7 +1552,6 @@ func (p *parser_s) parse_call_expression() Expression {
 	if !p.is_left_callable(p.current_expression()) {
 		p.throw(errors.ErrorMessages["uc_con"])
 	}
-
 	args := parse_seperated_list(p, p.parse_expression, comma, left_parens, right_parens, true, false)
 
 	p.set_current_expression(CallExpression{
@@ -1661,6 +1663,10 @@ func (p *parser_s) parse_arithmetic_expression() Expression {
 	p.skip()
 
 	rhs := p.parse_expression()
+
+	if rhs == nil {
+		p.unexpected_token("I was expecting an expression.")
+	}
 
 	default_expression := ArithmeticExpression{
 		LeftHandSide:  current,
