@@ -146,7 +146,7 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 	p.skip()
 	result := StatementList{}
 
-	allowed := []token_kind{var_keyword, const_keyword, for_keyword, match_keyword, if_keyword, identifier, right_curly_bracks, single_line_comment, multi_line_comment, hidden_keyword, corout_keyword, gen_keyword}
+	allowed := []token_kind{var_keyword, const_keyword, defer_keyword, for_keyword, match_keyword, if_keyword, identifier, right_curly_bracks, single_line_comment, multi_line_comment, hidden_keyword, corout_keyword, gen_keyword}
 	allowed = append(allowed, p.body_context...)
 
 	if p.is_this_context {
@@ -167,6 +167,10 @@ func (p *parser_s) parse_inline_level_statements() StatementList {
 	case return_keyword:
 		p.backup()
 		result = append(result, p.parse_return_statement())
+		result = append(result, p.parse_inline_level_statements()...)
+	case defer_keyword:
+		p.backup()
+		result = append(result, p.parse_defer_statement())
 		result = append(result, p.parse_inline_level_statements()...)
 	case if_keyword:
 		p.backup()
@@ -1189,12 +1193,33 @@ func (p *parser_s) parse_return_statement() ReturnStatement {
 
 	p.skip()
 
-	p.parse_inline_level_statements()
-
 	return ReturnStatement{
 		Kind_: ReturnStatementKind,
 
 		Value:    &expression,
+		location: start.Location,
+	}
+}
+
+func (p *parser_s) parse_defer_statement() DeferStatement {
+	defer p.catch()
+
+	start := p.must_expect([]token_kind{defer_keyword})
+
+	p.must_expect([]token_kind{whitespace, new_line})
+	p.skip()
+	expression := p.parse_expression()
+
+	if expression == nil {
+		p.unexpected_token("I was expecting an expression.")
+	}
+
+	p.skip()
+
+	return DeferStatement{
+		Kind_: DeferStatementKind,
+
+		Value:    expression,
 		location: start.Location,
 	}
 }
@@ -1209,8 +1234,6 @@ func (p *parser_s) parse_yield_statement() YieldStatement {
 	expression := p.parse_expression()
 
 	p.skip()
-
-	p.parse_inline_level_statements()
 
 	return YieldStatement{
 		Kind_: YieldStatementKind,

@@ -70,6 +70,7 @@ const (
 	const_keyword
 	continue_keyword
 	corout_keyword
+	defer_keyword
 	else_keyword
 	for_keyword
 	fun_keyword
@@ -154,6 +155,7 @@ var token_map = map[token_kind]string{
 	const_keyword:      "const keyword",
 	continue_keyword:   "continue keyword",
 	corout_keyword:     "corout keyword",
+	defer_keyword:      "defer keyword",
 	else_keyword:       "else keyword",
 	for_keyword:        "for keyword",
 	fun_keyword:        "fun keyword",

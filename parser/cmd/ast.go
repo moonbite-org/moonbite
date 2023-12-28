@@ -18,6 +18,7 @@ const (
 	PackageStatementKind              StatementKind = "statement:package"
 	UseStatementKind                  StatementKind = "statement:use"
 	ReturnStatementKind               StatementKind = "statement:return"
+	DeferStatementKind                StatementKind = "statement:defer"
 	BreakStatementKind                StatementKind = "statement:break"
 	ContinueStatementKind             StatementKind = "statement:continue"
 	YieldStatementKind                StatementKind = "statement:yield"
@@ -552,6 +553,21 @@ func (s ReturnStatement) Kind() StatementKind {
 }
 
 func (s ReturnStatement) Location() errors.Location {
+	return s.location
+}
+
+type DeferStatement struct {
+	Kind_ StatementKind `json:"kind"`
+
+	Value    Expression `json:"expression"`
+	location errors.Location
+}
+
+func (s DeferStatement) Kind() StatementKind {
+	return DeferStatementKind
+}
+
+func (s DeferStatement) Location() errors.Location {
 	return s.location
 }
 

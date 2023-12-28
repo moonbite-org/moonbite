@@ -257,38 +257,65 @@ func (c *PackageCompiler) compile_assignment_statement(statement parser.Assignme
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_unbound_fun_definition_statement(statement parser.UnboundFunDefinitionStatement) (common.InstructionSet, errors.Error) {
-	result := common.InstructionSet{}
-
+func (c *PackageCompiler) compile_fun_body(signature parser.FunctionSignature, body parser.StatementList) (common.InstructionSet, errors.Error) {
 	fun_instructions := common.InstructionSet{}
 
 	c.enter_scope()
-
 	c.SymbolTable.Define("#warning", parser.VariableKind, false)
+	if signature.SignatureKind() == parser.BoundFunctionSignatureKind {
+		c.SymbolTable.Define("this", parser.ConstantKind, false)
+	}
 
-	for _, parameter := range statement.Signature.Parameters {
+	for _, parameter := range signature.GetParameters() {
 		c.SymbolTable.Define(parameter.Name.Value, parser.ConstantKind, false)
 	}
 
-	for _, sub_statement := range statement.Body {
-		instructions, err := c.compile_statement(sub_statement)
+	deferred := []int{}
+	for i, sub_statement := range body {
+		if sub_statement.Kind() == parser.DeferStatementKind {
+			deferred = append(deferred, i)
+		} else {
+			instructions, err := c.compile_statement(sub_statement)
+			if err.Exists {
+				return fun_instructions, err
+			}
+
+			fun_instructions = append(fun_instructions, instructions...)
+		}
+	}
+
+	for _, index := range deferred {
+		sub_statement := body[index].(parser.DeferStatement)
+
+		instructions, err := c.compile_expression(sub_statement.Value, true)
 		if err.Exists {
-			return result, err
+			return fun_instructions, err
 		}
 
 		fun_instructions = append(fun_instructions, instructions...)
 	}
+
 	c.leave_scope()
 
+	return fun_instructions, errors.EmptyError
+}
+
+func (c *PackageCompiler) compile_unbound_fun_definition_statement(statement parser.UnboundFunDefinitionStatement) (common.InstructionSet, errors.Error) {
+	result := common.InstructionSet{}
+
+	fun_instructions, err := c.compile_fun_body(statement.Signature, statement.Body)
+	if err.Exists {
+		return result, err
+	}
 	value := common.FunctionObject{
 		Value: fun_instructions,
 	}
 	index := c.ConstantPool.Add(value)
 	result = append(result, common.NewInstruction(common.OpConstant, index))
 
-	symbol, err := c.SymbolTable.Define(statement.Signature.Name.Value, parser.ConstantKind, statement.Hidden)
-	if err != nil {
-		return result, errors.CreateCompileError(err.Error(), statement.Signature.Name.Location())
+	symbol, d_err := c.SymbolTable.Define(statement.Signature.Name.Value, parser.ConstantKind, statement.Hidden)
+	if d_err != nil {
+		return result, errors.CreateCompileError(d_err.Error(), statement.Signature.Name.Location())
 	}
 
 	if symbol.Scope == GlobalScope {
@@ -310,26 +337,10 @@ func (c *PackageCompiler) compile_bound_fun_definition_statement(statement parse
 		return result, errors.CreateCompileError(fmt.Sprintf("type '%s' is not defined", for_), statement.Signature.For.Location())
 	}
 
-	fun_instructions := common.InstructionSet{}
-
-	c.enter_scope()
-
-	c.SymbolTable.Define("#warning", parser.VariableKind, false)
-	c.SymbolTable.Define("this", parser.ConstantKind, false)
-	for _, parameter := range statement.Signature.Parameters {
-		c.SymbolTable.Define(parameter.Name.Value, parser.ConstantKind, false)
+	fun_instructions, err := c.compile_fun_body(statement.Signature, statement.Body)
+	if err.Exists {
+		return result, err
 	}
-
-	for _, sub_statement := range statement.Body {
-		instructions, err := c.compile_statement(sub_statement)
-		if err.Exists {
-			return result, err
-		}
-
-		fun_instructions = append(fun_instructions, instructions...)
-	}
-	c.leave_scope()
-
 	value := common.FunctionObject{
 		Value: fun_instructions,
 	}
@@ -337,9 +348,9 @@ func (c *PackageCompiler) compile_bound_fun_definition_statement(statement parse
 	result = append(result, common.NewInstruction(common.OpConstant, index))
 
 	name := fmt.Sprintf("%s.%s.%s", c.PackageName, for_, statement.Signature.Name.Value)
-	symbol, err := symbol_table.Define(name, parser.ConstantKind, statement.Hidden)
-	if err != nil {
-		return result, errors.CreateCompileError(err.Error(), statement.Signature.Name.Location())
+	symbol, d_err := symbol_table.Define(name, parser.ConstantKind, statement.Hidden)
+	if d_err != nil {
+		return result, errors.CreateCompileError(d_err.Error(), statement.Signature.Name.Location())
 	}
 
 	result = append(result, common.NewInstruction(common.OpSet, symbol.Index))
@@ -717,25 +728,10 @@ func (c *PackageCompiler) compile_literal_expression(expression parser.LiteralEx
 func (c *PackageCompiler) compile_fun_expression(expression parser.AnonymousFunExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
-	fun_instructions := common.InstructionSet{}
-
-	c.enter_scope()
-
-	c.SymbolTable.Define("#warning", parser.VariableKind, false)
-	for _, parameter := range expression.Signature.Parameters {
-		c.SymbolTable.Define(parameter.Name.Value, parser.ConstantKind, false)
+	fun_instructions, err := c.compile_fun_body(expression.Signature, expression.Body)
+	if err.Exists {
+		return result, err
 	}
-
-	for _, sub_statement := range expression.Body {
-		instructions, err := c.compile_statement(sub_statement)
-		if err.Exists {
-			return result, err
-		}
-
-		fun_instructions = append(fun_instructions, instructions...)
-	}
-	c.leave_scope()
-
 	value := common.FunctionObject{
 		Value: fun_instructions,
 	}
