@@ -57,7 +57,7 @@ func TestToken(t *testing.T) {
 	token := parser.Token{
 		Location:   errors.Location{},
 		Literal:    "",
-		Raw:        "",
+		Raw:        []rune{},
 		Offset:     0,
 		LineBreaks: 0,
 	}
@@ -68,7 +68,7 @@ func TestToken(t *testing.T) {
 		Kind:       parser.Whitespace,
 		Location:   errors.Location{},
 		Literal:    "",
-		Raw:        "",
+		Raw:        []rune{},
 		Offset:     0,
 		LineBreaks: 0,
 	}
@@ -79,7 +79,7 @@ func TestToken(t *testing.T) {
 		Kind:       parser.Keyword,
 		Location:   errors.Location{},
 		Literal:    "as",
-		Raw:        "as",
+		Raw:        []rune("as"),
 		Offset:     0,
 		LineBreaks: 0,
 	}

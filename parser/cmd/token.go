@@ -185,7 +185,7 @@ type Token struct {
 	Kind       token_kind      `json:"kind"`
 	Location   errors.Location `json:"location"`
 	Literal    string          `json:"literal"`
-	Raw        string          `json:"raw"`
+	Raw        []rune          `json:"raw"`
 	Offset     int             `json:"offset"`
 	LineBreaks int             `json:"line_breaks"`
 }

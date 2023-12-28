@@ -137,7 +137,7 @@ func (l lexer) create_token(kind token_kind, length int) Token {
 		Kind:       kind,
 		Location:   location,
 		Literal:    string(literal),
-		Raw:        string(raw),
+		Raw:        raw,
 		Offset:     l.offset,
 		LineBreaks: line_breaks,
 	}
