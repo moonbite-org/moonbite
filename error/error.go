@@ -19,6 +19,7 @@ var ErrorMessages = map[string]string{
 	"i_con":    "Illegal construct, I cannot %s",
 	"i_val":    "Invalid value, I cannot make sense of this value. %s",
 	"w_e_args": "Too many arguments, warn expressions should only have exactly 1 argument",
+	"u_def":    "Defer is a compile time construct, you cannot use it in conditionals or loops",
 }
 
 var ErrorKindMap = map[ErrorKind]string{

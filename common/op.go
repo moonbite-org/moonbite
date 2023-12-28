@@ -27,6 +27,7 @@ const (
 	OpReturnEmpty
 	OpBreak
 	OpBreakEmpty
+	OpDefer
 	OpContinue
 	OpYield
 	OpIndex
@@ -69,6 +70,7 @@ var op_map = map[Op]string{
 	OpReturn:             "Return",
 	OpReturnEmpty:        "ReturnEmpty",
 	OpBreak:              "Break",
+	OpDefer:              "Defer",
 	OpBreakEmpty:         "BreakEmpty",
 	OpContinue:           "Continue",
 	OpYield:              "Yield",

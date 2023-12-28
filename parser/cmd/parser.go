@@ -772,6 +772,9 @@ func (p *parser_s) continue_type_expression() Expression {
 		})
 
 		return p.continue_type_expression()
+	case multi_line_comment:
+		p.advance()
+		return p.continue_expression()
 	case new_line, whitespace:
 		return exit()
 	default:
@@ -1344,10 +1347,7 @@ func (p *parser_s) continue_expression() Expression {
 		is_ended := p.might_expect([]token_kind{new_line})
 
 		if is_ended != nil {
-			p.skip()
-			result := p.current_expression()
-			p.pop_expression()
-			return result
+			return exit()
 		}
 		return p.continue_expression()
 	case left_curly_bracks:
@@ -1646,6 +1646,8 @@ func (p *parser_s) parse_or_expression() Expression {
 		p.throw(fmt.Sprintf(errors.ErrorMessages["i_con"], "recover from a non-function expression"))
 	}
 
+	lhs := p.current_expression()
+
 	p.skip()
 	p.must_expect([]token_kind{or_keyword})
 	p.must_expect([]token_kind{whitespace, new_line})
@@ -1654,7 +1656,7 @@ func (p *parser_s) parse_or_expression() Expression {
 	rhs := p.parse_expression()
 
 	p.set_current_expression(OrExpression{
-		LeftHandSide:  p.current_expression(),
+		LeftHandSide:  lhs,
 		RightHandSide: rhs,
 		Kind_:         OrExpressionKind,
 		location:      p.current_expression().Location(),
@@ -2112,6 +2114,10 @@ func (p *parser_s) parse_predicate_block() PredicateBlock {
 func (p *parser_s) parse_match_expression() Expression {
 	defer p.catch()
 
+	if p.current_expression() != nil {
+		p.unexpected_token("I wasn't expecting a match expression")
+	}
+
 	start := p.must_expect([]token_kind{match_keyword})
 	p.skip()
 	p.must_expect([]token_kind{left_parens})
@@ -2157,17 +2163,17 @@ func (p *parser_s) parse_match_expression() Expression {
 
 	p.skip()
 	p.must_expect([]token_kind{right_curly_bracks})
+	p.skip()
 
-	p.set_current_expression(MatchExpression{
+	p.is_match_context = false
+
+	return MatchExpression{
 		Against:   against,
 		Blocks:    blocks,
 		BaseBlock: base_block,
 		Kind_:     MatchExpressionKind,
 		location:  start.Location,
-	})
-	p.is_match_context = false
-
-	return p.continue_expression()
+	}
 }
 
 func Parse(input []byte, filepath string) (Ast, errors.Error) {

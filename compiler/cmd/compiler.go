@@ -108,6 +108,8 @@ func (c *PackageCompiler) compile_statement(statement parser.Statement) (common.
 		return c.compile_return_statement(statement.(parser.ReturnStatement))
 	case parser.BreakStatementKind:
 		return c.compile_break_statement(statement.(parser.BreakStatement))
+	case parser.DeferStatementKind:
+		return c.compile_defer_statement(statement.(parser.DeferStatement))
 	case parser.ContinueStatementKind:
 		return c.compile_continue_statement(statement.(parser.ContinueStatement))
 	case parser.YieldStatementKind:
@@ -270,29 +272,27 @@ func (c *PackageCompiler) compile_fun_body(signature parser.FunctionSignature, b
 		c.SymbolTable.Define(parameter.Name.Value, parser.ConstantKind, false)
 	}
 
-	deferred := []int{}
-	for i, sub_statement := range body {
-		if sub_statement.Kind() == parser.DeferStatementKind {
-			deferred = append(deferred, i)
-		} else {
-			instructions, err := c.compile_statement(sub_statement)
-			if err.Exists {
-				return fun_instructions, err
-			}
-
-			fun_instructions = append(fun_instructions, instructions...)
-		}
-	}
-
-	for _, index := range deferred {
-		sub_statement := body[index].(parser.DeferStatement)
-
-		instructions, err := c.compile_expression(sub_statement.Value, true)
+	for _, sub_statement := range body {
+		instructions, err := c.compile_statement(sub_statement)
 		if err.Exists {
 			return fun_instructions, err
 		}
 
 		fun_instructions = append(fun_instructions, instructions...)
+	}
+
+	for i, instruction := range fun_instructions {
+		if instruction.Op == common.OpDefer {
+			// slice the deferred part, remove the defer op and rearrange the body
+			deferred := fun_instructions[i+1 : int(instruction.Operands[0])-1]
+			head := fun_instructions[:i]
+			tail := fun_instructions[int(instruction.Operands[0])-1:]
+
+			fun_instructions = common.InstructionSet{}
+			fun_instructions = append(fun_instructions, head...)
+			fun_instructions = append(fun_instructions, tail...)
+			fun_instructions = append(fun_instructions, deferred...)
+		}
 	}
 
 	c.leave_scope()
@@ -391,14 +391,28 @@ func (c *PackageCompiler) compile_return_statement(statement parser.ReturnStatem
 
 func (c *PackageCompiler) compile_continue_statement(statement parser.ContinueStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
-	result = append(result, common.NewInstruction(common.OpContinue))
+	result = append(result, common.NewInstruction(common.OpContinue, 0, 0))
 
 	return result, errors.EmptyError
 }
 
 func (c *PackageCompiler) compile_break_statement(statement parser.BreakStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
-	result = append(result, common.NewInstruction(common.OpBreak))
+	result = append(result, common.NewInstruction(common.OpBreak, 0, 0))
+
+	return result, errors.EmptyError
+}
+
+func (c *PackageCompiler) compile_defer_statement(statement parser.DeferStatement) (common.InstructionSet, errors.Error) {
+	result := common.InstructionSet{}
+
+	expression, err := c.compile_expression(statement.Value, true)
+	if err.Exists {
+		return result, err
+	}
+
+	result = append(result, common.NewInstruction(common.OpDefer, expression.GetSize(), 0))
+	result = append(result, expression...)
 
 	return result, errors.EmptyError
 }
@@ -435,6 +449,9 @@ func (c *PackageCompiler) compile_if_statement(statement parser.IfStatement) (co
 
 	main_block := common.InstructionSet{}
 	for _, sub_statement := range statement.MainBlock.Body {
+		if sub_statement.Kind() == parser.DeferStatementKind {
+			return result, errors.CreateCompileError(errors.ErrorMessages["u_def"], sub_statement.Location())
+		}
 		instructions, err := c.compile_statement(sub_statement)
 		if err.Exists {
 			return result, err
@@ -498,26 +515,64 @@ func (c *PackageCompiler) compile_loop_statement(statement parser.LoopStatement)
 	case parser.UnipartiteLoopKind:
 		return c.compile_unipartite_loop_statement(statement)
 	case parser.TripartiteLoopKind:
-		return c.compile_tripartite_loop_predicate(statement)
+		return c.compile_tripartite_loop_statement(statement)
 	default:
 		return common.InstructionSet{}, errors.CreateCompileError(fmt.Sprintf("unknown loop predicate kind %s", statement.Predicate.LoopKind()), statement.Location())
 	}
+}
+
+func (c *PackageCompiler) compile_loop_body(body parser.StatementList) (common.InstructionSet, errors.Error) {
+	result := common.InstructionSet{}
+
+	c.enter_scope()
+	for _, sub_statement := range body {
+		if sub_statement.Kind() == parser.DeferStatementKind {
+			return result, errors.CreateCompileError(errors.ErrorMessages["u_def"], sub_statement.Location())
+		}
+		instructions, err := c.compile_statement(sub_statement)
+		if err.Exists {
+			return result, err
+		}
+		result = append(result, instructions...)
+	}
+	c.leave_scope()
+
+	for i, instruction := range result {
+		if instruction.Op == common.OpBreak {
+			/* calculate the instruction size after the break and add
+			last jump that reverts back to the predicate to break out of the loop */
+			template := common.NewInstruction(common.OpJump, 0, 0)
+			current_position := 0
+
+			for j := 0; j <= i; j++ {
+				current_position += result[j].GetSize()
+			}
+
+			result[i] = common.NewInstruction(common.OpJump, result.GetSize()-current_position+template.GetSize(), 0)
+		} else if instruction.Op == common.OpContinue {
+			/* calculate the instruction size after the continue and don't include
+			last jump that reverts back to the predicate to go to the start of the loop */
+			current_position := 0
+
+			for j := 0; j <= i; j++ {
+				current_position += result[j].GetSize()
+			}
+
+			result[i] = common.NewInstruction(common.OpJump, result.GetSize()-current_position, 0)
+		}
+	}
+
+	return result, errors.EmptyError
 }
 
 func (c *PackageCompiler) compile_unipartite_loop_statement(statement parser.LoopStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 	template := common.NewInstruction(common.OpJump, 0, 0)
 
-	body := common.InstructionSet{}
-	c.enter_scope()
-	for _, sub_statement := range statement.Body {
-		instructions, err := c.compile_statement(sub_statement)
-		if err.Exists {
-			return result, err
-		}
-		body = append(body, instructions...)
+	body, err := c.compile_loop_body(statement.Body)
+	if err.Exists {
+		return result, err
 	}
-	c.leave_scope()
 
 	predicate := common.InstructionSet{}
 
@@ -527,7 +582,7 @@ func (c *PackageCompiler) compile_unipartite_loop_statement(statement parser.Loo
 	}
 
 	predicate = append(predicate, instructions...)
-	predicate = append(predicate, common.NewInstruction(common.OpJumpIfFalse, body.GetSize()+template.GetSize()))
+	predicate = append(predicate, common.NewInstruction(common.OpJumpIfFalse, body.GetSize()+template.GetSize(), 0))
 
 	result = append(result, predicate...)
 	result = append(result, body...)
@@ -536,7 +591,7 @@ func (c *PackageCompiler) compile_unipartite_loop_statement(statement parser.Loo
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_tripartite_loop_predicate(statement parser.LoopStatement) (common.InstructionSet, errors.Error) {
+func (c *PackageCompiler) compile_tripartite_loop_statement(statement parser.LoopStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 	template := common.NewInstruction(common.OpJump, 0, 0)
 
@@ -556,15 +611,12 @@ func (c *PackageCompiler) compile_tripartite_loop_predicate(statement parser.Loo
 	}
 	result = append(result, predicate...)
 
-	c.enter_scope()
-	for _, sub_statement := range statement.Body {
-		instructions, err := c.compile_statement(sub_statement)
-		if err.Exists {
-			return result, err
-		}
-		body = append(body, instructions...)
+	instructions, err := c.compile_loop_body(statement.Body)
+	if err.Exists {
+		return result, err
 	}
-	c.leave_scope()
+	body = append(body, instructions...)
+
 	c.leave_scope()
 
 	result = append(result, common.NewInstruction(common.OpJumpIfFalse, body.GetSize()+template.GetSize(), 0))

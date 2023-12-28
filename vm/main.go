@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	compiler "github.com/moonbite-org/moonbite/compiler/cmd"
 )
@@ -17,5 +18,5 @@ func main() {
 	fmt.Println(root.ConstantPool)
 	fmt.Println(root.SymbolTable)
 	fmt.Println(root.GetBytes())
-	// os.WriteFile("/Users/muhammedalican/Documents/projects/a-star/main.mbin", root.GetBytes(), 0644)
+	os.WriteFile("/Users/muhammedalican/Documents/projects/a-star/main.mbin", root.GetBytes(), 0644)
 }
