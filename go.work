@@ -1,6 +1,7 @@
 go 1.21.0
 
 use (
+	./abi
 	./common
 	./compiler
 	./error

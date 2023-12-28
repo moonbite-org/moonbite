@@ -9,16 +9,16 @@ import (
 	parser "github.com/moonbite-org/moonbite/parser/cmd"
 )
 
-func (c *PackageCompiler) enter_scope() {
+func (c *package_compiler) enter_scope() {
 	scoped_table := NewScopedSymbolTable(c.SymbolTable)
 	c.SymbolTable = scoped_table
 }
 
-func (c *PackageCompiler) leave_scope() {
+func (c *package_compiler) leave_scope() {
 	c.SymbolTable = c.SymbolTable.Outer
 }
 
-func (c *PackageCompiler) resolve_assignee(assignee parser.Expression) (*Symbol, errors.Error) {
+func (c *package_compiler) resolve_assignee(assignee parser.Expression) (*Symbol, errors.Error) {
 	acceptable_assignees := []parser.ExpressionKind{parser.IdentifierExpressionKind, parser.MemberExpressionKind, parser.IndexExpressionKind}
 
 	if !slices.Contains(acceptable_assignees, assignee.Kind()) {
@@ -44,7 +44,7 @@ func (c *PackageCompiler) resolve_assignee(assignee parser.Expression) (*Symbol,
 	}
 }
 
-func (c *PackageCompiler) resolve_path(expression parser.Expression) (common.InstructionSet, int, errors.Error) {
+func (c *package_compiler) resolve_path(expression parser.Expression) (common.InstructionSet, int, errors.Error) {
 	switch expression.Kind() {
 	case parser.IdentifierExpressionKind:
 		value := expression.(parser.IdentifierExpression).Value
@@ -90,7 +90,7 @@ func (c *PackageCompiler) resolve_path(expression parser.Expression) (common.Ins
 	}
 }
 
-func (c *PackageCompiler) compile_statement(statement parser.Statement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_statement(statement parser.Statement) (common.InstructionSet, errors.Error) {
 	switch statement.Kind() {
 	case parser.ExpressionStatementKind:
 		return c.compile_expression(statement.(parser.ExpressionStatement).Expression, true)
@@ -125,7 +125,7 @@ func (c *PackageCompiler) compile_statement(statement parser.Statement) (common.
 	}
 }
 
-func (c *PackageCompiler) compile_declaration_statement(statement parser.DeclarationStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_declaration_statement(statement parser.DeclarationStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	if statement.Value != nil {
@@ -154,7 +154,7 @@ func (c *PackageCompiler) compile_declaration_statement(statement parser.Declara
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_assignment_statement(statement parser.AssignmentStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_assignment_statement(statement parser.AssignmentStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	symbol, err := c.resolve_assignee(statement.LeftHandSide)
@@ -259,7 +259,7 @@ func (c *PackageCompiler) compile_assignment_statement(statement parser.Assignme
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_fun_body(signature parser.FunctionSignature, body parser.StatementList) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_fun_body(signature parser.FunctionSignature, body parser.StatementList) (common.InstructionSet, errors.Error) {
 	fun_instructions := common.InstructionSet{}
 
 	c.enter_scope()
@@ -300,7 +300,7 @@ func (c *PackageCompiler) compile_fun_body(signature parser.FunctionSignature, b
 	return fun_instructions, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_unbound_fun_definition_statement(statement parser.UnboundFunDefinitionStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_unbound_fun_definition_statement(statement parser.UnboundFunDefinitionStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	fun_instructions, err := c.compile_fun_body(statement.Signature, statement.Body)
@@ -327,7 +327,7 @@ func (c *PackageCompiler) compile_unbound_fun_definition_statement(statement par
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_bound_fun_definition_statement(statement parser.BoundFunDefinitionStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_bound_fun_definition_statement(statement parser.BoundFunDefinitionStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	for_ := statement.Signature.For.Name.(parser.IdentifierExpression).Value
@@ -347,7 +347,7 @@ func (c *PackageCompiler) compile_bound_fun_definition_statement(statement parse
 	index := c.ConstantPool.Add(value)
 	result = append(result, common.NewInstruction(common.OpConstant, index))
 
-	name := fmt.Sprintf("%s.%s.%s", c.PackageName, for_, statement.Signature.Name.Value)
+	name := fmt.Sprintf("%s.%s.%s", c.package_name, for_, statement.Signature.Name.Value)
 	symbol, d_err := symbol_table.Define(name, parser.ConstantKind, statement.Hidden)
 	if d_err != nil {
 		return result, errors.CreateCompileError(d_err.Error(), statement.Signature.Name.Location())
@@ -358,7 +358,7 @@ func (c *PackageCompiler) compile_bound_fun_definition_statement(statement parse
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_type_definition_statement(statement parser.TypeDefinitionStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_type_definition_statement(statement parser.TypeDefinitionStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	if c.TypeSymbolTable[statement.Name.Value] != nil {
@@ -370,7 +370,7 @@ func (c *PackageCompiler) compile_type_definition_statement(statement parser.Typ
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_return_statement(statement parser.ReturnStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_return_statement(statement parser.ReturnStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	if statement.Value != nil {
@@ -389,21 +389,21 @@ func (c *PackageCompiler) compile_return_statement(statement parser.ReturnStatem
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_continue_statement(statement parser.ContinueStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_continue_statement(statement parser.ContinueStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 	result = append(result, common.NewInstruction(common.OpContinue, 0, 0))
 
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_break_statement(statement parser.BreakStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_break_statement(statement parser.BreakStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 	result = append(result, common.NewInstruction(common.OpBreak, 0, 0))
 
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_defer_statement(statement parser.DeferStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_defer_statement(statement parser.DeferStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	expression, err := c.compile_expression(statement.Value, true)
@@ -417,7 +417,7 @@ func (c *PackageCompiler) compile_defer_statement(statement parser.DeferStatemen
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_yield_statement(statement parser.YieldStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_yield_statement(statement parser.YieldStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	if statement.Value != nil {
@@ -436,7 +436,7 @@ func (c *PackageCompiler) compile_yield_statement(statement parser.YieldStatemen
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_if_statement(statement parser.IfStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_if_statement(statement parser.IfStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 	template := common.NewInstruction(common.OpJump, 0, 0)
 
@@ -510,7 +510,7 @@ func (c *PackageCompiler) compile_if_statement(statement parser.IfStatement) (co
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_loop_statement(statement parser.LoopStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_loop_statement(statement parser.LoopStatement) (common.InstructionSet, errors.Error) {
 	switch statement.Predicate.LoopKind() {
 	case parser.UnipartiteLoopKind:
 		return c.compile_unipartite_loop_statement(statement)
@@ -521,7 +521,7 @@ func (c *PackageCompiler) compile_loop_statement(statement parser.LoopStatement)
 	}
 }
 
-func (c *PackageCompiler) compile_loop_body(body parser.StatementList) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_loop_body(body parser.StatementList) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	c.enter_scope()
@@ -565,7 +565,7 @@ func (c *PackageCompiler) compile_loop_body(body parser.StatementList) (common.I
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_unipartite_loop_statement(statement parser.LoopStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_unipartite_loop_statement(statement parser.LoopStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 	template := common.NewInstruction(common.OpJump, 0, 0)
 
@@ -591,7 +591,7 @@ func (c *PackageCompiler) compile_unipartite_loop_statement(statement parser.Loo
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_tripartite_loop_statement(statement parser.LoopStatement) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_tripartite_loop_statement(statement parser.LoopStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 	template := common.NewInstruction(common.OpJump, 0, 0)
 
@@ -626,7 +626,7 @@ func (c *PackageCompiler) compile_tripartite_loop_statement(statement parser.Loo
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_expression(expression parser.Expression, should_clean bool) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_expression(expression parser.Expression, should_clean bool) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 	err := errors.EmptyError
 
@@ -694,7 +694,7 @@ func (c *PackageCompiler) compile_expression(expression parser.Expression, shoul
 	return result, err
 }
 
-func (c *PackageCompiler) compile_literal_expression(expression parser.LiteralExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_literal_expression(expression parser.LiteralExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 	err := errors.EmptyError
 
@@ -777,7 +777,7 @@ func (c *PackageCompiler) compile_literal_expression(expression parser.LiteralEx
 	return result, err
 }
 
-func (c *PackageCompiler) compile_fun_expression(expression parser.AnonymousFunExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_fun_expression(expression parser.AnonymousFunExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	fun_instructions, err := c.compile_fun_body(expression.Signature, expression.Body)
@@ -793,7 +793,7 @@ func (c *PackageCompiler) compile_fun_expression(expression parser.AnonymousFunE
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_arithmetic_expression(expression parser.ArithmeticExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_arithmetic_expression(expression parser.ArithmeticExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	left, err := c.compile_expression(expression.LeftHandSide, false)
@@ -824,7 +824,7 @@ func (c *PackageCompiler) compile_arithmetic_expression(expression parser.Arithm
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_arithmetic_unary_expression(expression parser.ArithmeticUnaryExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_arithmetic_unary_expression(expression parser.ArithmeticUnaryExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 	var operator string
 
@@ -865,7 +865,7 @@ func (c *PackageCompiler) compile_arithmetic_unary_expression(expression parser.
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_not_expression(expression parser.NotExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_not_expression(expression parser.NotExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	instructions, err := c.compile_expression(expression.Expression, false)
@@ -879,7 +879,7 @@ func (c *PackageCompiler) compile_not_expression(expression parser.NotExpression
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_giveup_expression(expression parser.GiveupExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_giveup_expression(expression parser.GiveupExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	result = append(result, common.NewInstruction(common.OpExit, 1))
@@ -887,7 +887,7 @@ func (c *PackageCompiler) compile_giveup_expression(expression parser.GiveupExpr
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_comparison_expression(expression parser.ComparisonExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_comparison_expression(expression parser.ComparisonExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	left, err := c.compile_expression(expression.LeftHandSide, false)
@@ -921,7 +921,7 @@ func (c *PackageCompiler) compile_comparison_expression(expression parser.Compar
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_binary_expression(expression parser.BinaryExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_binary_expression(expression parser.BinaryExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	left, err := c.compile_expression(expression.LeftHandSide, false)
@@ -946,7 +946,7 @@ func (c *PackageCompiler) compile_binary_expression(expression parser.BinaryExpr
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_identifier_expression(expression parser.IdentifierExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_identifier_expression(expression parser.IdentifierExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	symbol := c.SymbolTable.Resolve(expression.Value)
@@ -966,7 +966,7 @@ func (c *PackageCompiler) compile_identifier_expression(expression parser.Identi
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_index_expression(expression parser.IndexExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_index_expression(expression parser.IndexExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	host, err := c.compile_expression(expression.Host, false)
@@ -986,7 +986,7 @@ func (c *PackageCompiler) compile_index_expression(expression parser.IndexExpres
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_member_expression(expression parser.MemberExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_member_expression(expression parser.MemberExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	left, err := c.compile_expression(expression.LeftHandSide, false)
@@ -1006,7 +1006,7 @@ func (c *PackageCompiler) compile_member_expression(expression parser.MemberExpr
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_call_expression(expression parser.CallExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_call_expression(expression parser.CallExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	callee, err := c.compile_expression(expression.Callee, false)
@@ -1028,13 +1028,13 @@ func (c *PackageCompiler) compile_call_expression(expression parser.CallExpressi
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_instanceof_expression(expression parser.InstanceofExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_instanceof_expression(expression parser.InstanceofExpression) (common.InstructionSet, errors.Error) {
 	return c.compile_literal_expression(parser.BoolLiteralExpression{
 		Value: true,
 	})
 }
 
-func (c *PackageCompiler) compile_type_cast_expression(expression parser.TypeCastExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_type_cast_expression(expression parser.TypeCastExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	instructions, err := c.compile_expression(expression.Value, false)
@@ -1049,14 +1049,14 @@ func (c *PackageCompiler) compile_type_cast_expression(expression parser.TypeCas
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_this_expression(expression parser.ThisExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_this_expression(expression parser.ThisExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 	result = append(result, common.NewInstruction(common.OpGetLocal, 0))
 
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_match_self_expression(expression parser.MatchSelfExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_match_self_expression(expression parser.MatchSelfExpression) (common.InstructionSet, errors.Error) {
 	if c.current_match_target == nil {
 		return common.InstructionSet{}, errors.CreateTypeError("match self expressions are not allowed outside of match expressions", expression.Location())
 	}
@@ -1069,7 +1069,7 @@ type match_block struct {
 	body      common.InstructionSet
 }
 
-func (c *PackageCompiler) compile_match_block(block parser.PredicateBlock, base_exists bool) (match_block, errors.Error) {
+func (c *package_compiler) compile_match_block(block parser.PredicateBlock, base_exists bool) (match_block, errors.Error) {
 	// To reliably measure the sizes of the blocks later, dummy jump instructions are added
 	result := match_block{
 		predicate: common.InstructionSet{},
@@ -1109,7 +1109,7 @@ func (c *PackageCompiler) compile_match_block(block parser.PredicateBlock, base_
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_match_expression(expression parser.MatchExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_match_expression(expression parser.MatchExpression) (common.InstructionSet, errors.Error) {
 	/* this works by putting the predicates one after the other
 	and the bodies after them with order. When a predicate is executed
 	it will jump to its body and in the end it will push either a 0 or 1
@@ -1206,7 +1206,7 @@ func (c *PackageCompiler) compile_match_expression(expression parser.MatchExpres
 	return result, err
 }
 
-func (c *PackageCompiler) compile_corout_fun_expression(expression parser.CoroutFunExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_corout_fun_expression(expression parser.CoroutFunExpression) (common.InstructionSet, errors.Error) {
 	literal := parser.InstanceLiteralExpression{
 		Type: parser.TypeIdentifier{
 			Name:     parser.IdentifierExpression{Value: "Corout"},
@@ -1223,7 +1223,7 @@ func (c *PackageCompiler) compile_corout_fun_expression(expression parser.Corout
 	return c.compile_literal_expression(literal)
 }
 
-func (c *PackageCompiler) compile_gen_fun_expression(expression parser.GenFunExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_gen_fun_expression(expression parser.GenFunExpression) (common.InstructionSet, errors.Error) {
 	literal := parser.InstanceLiteralExpression{
 		Type: parser.TypeIdentifier{
 			Name:     parser.IdentifierExpression{Value: "Generator"},
@@ -1240,7 +1240,7 @@ func (c *PackageCompiler) compile_gen_fun_expression(expression parser.GenFunExp
 	return c.compile_literal_expression(literal)
 }
 
-func (c *PackageCompiler) compile_warn_expression(expression parser.WarnExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_warn_expression(expression parser.WarnExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	assignment, err := c.compile_assignment_statement(parser.AssignmentStatement{
@@ -1260,13 +1260,13 @@ func (c *PackageCompiler) compile_warn_expression(expression parser.WarnExpressi
 	return result, errors.EmptyError
 }
 
-func (c *PackageCompiler) compile_caret_expression(expression parser.CaretExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_caret_expression(expression parser.CaretExpression) (common.InstructionSet, errors.Error) {
 	return c.compile_identifier_expression(parser.IdentifierExpression{
 		Value: "#warning",
 	})
 }
 
-func (c *PackageCompiler) compile_or_expression(expression parser.OrExpression) (common.InstructionSet, errors.Error) {
+func (c *package_compiler) compile_or_expression(expression parser.OrExpression) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
 	left, err := c.compile_expression(expression.LeftHandSide, false)
@@ -1282,7 +1282,7 @@ func (c *PackageCompiler) compile_or_expression(expression parser.OrExpression) 
 
 	comparison, err := c.compile_expression(parser.ComparisonExpression{
 		LeftHandSide:  parser.IdentifierExpression{Value: "#warning"},
-		RightHandSide: parser.IdentifierExpression{Value: "null"},
+		RightHandSide: parser.IdentifierExpression{Value: "#null"},
 		Operator: parser.OperatorToken{
 			Literal: "!=",
 		},

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/moonbite-org/moonbite/abi"
 	compiler "github.com/moonbite-org/moonbite/compiler/cmd"
 )
 
@@ -13,7 +14,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	c := compiler.New(os.Args[1])
+	c := compiler.New(os.Args[1], abi.NativeABI)
 	if err := c.Compile(); err.Exists {
 		message, _ := json.Marshal(err)
 		os.Stderr.Write(message)

@@ -1,40 +1,49 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/moonbite-org/moonbite/common"
 	parser "github.com/moonbite-org/moonbite/parser/cmd"
+	"gopkg.in/yaml.v3"
 )
 
-// type listener struct {
-// 	event   string
-// 	handler func(event Event[any])
-// }
+type Dependency struct {
+	Name    string
+	Version string
+}
 
-// type Event[T any] struct {
-// 	Target EventTarget
-// 	Data   T
-// }
+type WorkspaceEntry struct {
+	Path    string
+	Module  string
+	Version string
+	Deps    []Dependency
+	DevDeps []Dependency
+}
 
-// type EventTarget struct {
-// 	listeners []listener
-// }
+type ModConfig struct {
+	Module    string
+	Moonbite  string
+	Version   string
+	Deps      []Dependency
+	DevDeps   []Dependency
+	Workspace []WorkspaceEntry
+}
 
-// func (t *EventTarget) AddListener(event string, callbackfn func(event Event[any])) {
-// 	t.listeners = append(t.listeners, listener{event: event, handler: callbackfn})
-// }
+func ParseConfig(config_path string) (ModConfig, error) {
+	config_file, err := os.ReadFile(config_path)
+	if err != nil {
+		return ModConfig{}, err
+	}
+	config := ModConfig{}
 
-// func (t EventTarget) Dispatch(name string, data any) {
-// 	event := Event[any]{
-// 		Target: t,
-// 		Data:   data,
-// 	}
+	err = yaml.Unmarshal(config_file, &config)
+	if err != nil {
+		return ModConfig{}, err
+	}
 
-// 	for _, listener := range t.listeners {
-// 		if listener.event == name {
-// 			listener.handler(event)
-// 		}
-// 	}
-// }
+	return config, nil
+}
 
 type DummyTypeChecker struct{}
 
