@@ -707,12 +707,17 @@ func (c *package_compiler) compile_literal_expression(expression parser.LiteralE
 
 		result = append(result, common.NewInstruction(common.OpConstant, index))
 	case parser.StringLiteralKind:
-		value := expression.(parser.StringLiteralExpression).Value
-		index := c.ConstantPool.Add(common.StringObject{
-			Value: value,
-		})
+		list := expression.(parser.StringLiteralExpression)
 
-		result = append(result, common.NewInstruction(common.OpConstant, index))
+		for _, value := range list.Value {
+			instructions, err := c.compile_expression(parser.RuneLiteralExpression{Value: value}, false)
+			if err.Exists {
+				return result, err
+			}
+			result = append(result, instructions...)
+		}
+
+		result = append(result, common.NewInstruction(common.OpArray, len([]rune(list.Value))))
 	case parser.RuneLiteralKind:
 		value := expression.(parser.RuneLiteralExpression).Value
 		index := c.ConstantPool.Add(common.Int32Object{
