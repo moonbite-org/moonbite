@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-
-	parser "github.com/moonbite-org/moonbite/parser/cmd"
 )
 
 type ObjectKind string
@@ -98,19 +96,19 @@ func (o ByteObject) Serialize() []byte {
 	return result
 }
 
-type BoolObject struct {
+type bool_object struct {
 	Value bool
 }
 
-func (o BoolObject) Kind() ObjectKind {
+func (o bool_object) Kind() ObjectKind {
 	return BoolObjectKind
 }
 
-func (o BoolObject) GetValue() interface{} {
+func (o bool_object) GetValue() interface{} {
 	return o.Value
 }
 
-func (o BoolObject) Serialize() []byte {
+func (o bool_object) Serialize() []byte {
 	result := []byte{type_map[o.Kind()]}
 
 	if o.Value {
@@ -121,6 +119,10 @@ func (o BoolObject) Serialize() []byte {
 
 	return result
 }
+
+var True = bool_object{Value: true}
+
+var False = bool_object{Value: false}
 
 type Uint8Object struct {
 	Value uint8
@@ -402,18 +404,18 @@ func (o FunctionObject) Serialize() []byte {
 	return result
 }
 
-func ObjectFromLiteral(literal parser.LiteralExpression) Object {
-	switch literal.LiteralKind() {
-	case parser.StringLiteralKind:
-		return StringObject{Value: literal.(parser.StringLiteralExpression).Value}
-	case parser.BoolLiteralKind:
-		return BoolObject{Value: literal.(parser.BoolLiteralExpression).Value}
-	case parser.NumberLiteralKind:
-		return StringObject{Value: "not implemented"}
-	default:
-		return StringObject{Value: "not implemented"}
-	}
-}
+// func ObjectFromLiteral(literal parser.LiteralExpression) Object {
+// 	switch literal.LiteralKind() {
+// 	case parser.StringLiteralKind:
+// 		return StringObject{Value: literal.(parser.StringLiteralExpression).Value}
+// 	case parser.BoolLiteralKind:
+// 		return bool_object{Value: literal.(parser.BoolLiteralExpression).Value}
+// 	case parser.NumberLiteralKind:
+// 		return StringObject{Value: "not implemented"}
+// 	default:
+// 		return StringObject{Value: "not implemented"}
+// 	}
+// }
 
 type ConstantPool struct {
 	Values  [1024]Object

@@ -11,6 +11,7 @@ import (
 	"github.com/moonbite-org/moonbite/common"
 	errors "github.com/moonbite-org/moonbite/error"
 	parser "github.com/moonbite-org/moonbite/parser/cmd"
+	typechecker "github.com/moonbite-org/moonbite/typechecker/cmd"
 )
 
 type Compiler struct {
@@ -156,14 +157,14 @@ func (m *Module) Compile() errors.Error {
 var builtins = []string{"exit", "#null"}
 
 type package_compiler struct {
-	package_name         string
-	ABI                  abi.ABI
-	IsRoot               bool
-	Definitions          []parser.Definition
-	SymbolTable          *SymbolTable
-	TypeSymbolTable      map[string]*SymbolTable
+	package_name string
+	ABI          abi.ABI
+	IsRoot       bool
+	Definitions  []parser.Definition
+	SymbolTable  *SymbolTable
+	// TypeSymbolTable      map[string]*SymbolTable
 	ConstantPool         common.ConstantPool
-	Typechecker          DummyTypeChecker
+	Typechecker          typechecker.Typechecker
 	Instructions         common.InstructionSet
 	current_match_target common.InstructionSet
 }
@@ -210,11 +211,11 @@ func (c package_compiler) GetBytes() []byte {
 
 func new_package_compiler(package_ string, definitions []parser.Definition, is_root bool, interface_ abi.ABI) package_compiler {
 	return package_compiler{
-		package_name:    package_,
-		ABI:             interface_,
-		Definitions:     definitions,
-		SymbolTable:     NewSymbolTable(),
-		TypeSymbolTable: map[string]*SymbolTable{},
+		package_name: package_,
+		ABI:          interface_,
+		Definitions:  definitions,
+		SymbolTable:  NewSymbolTable(),
+		// TypeSymbolTable: map[string]*SymbolTable{},
 		ConstantPool: common.ConstantPool{
 			Values: [1024]common.Object{},
 		},

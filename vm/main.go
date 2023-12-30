@@ -18,4 +18,5 @@ func main() {
 	fmt.Println(root.ConstantPool)
 	fmt.Println(root.SymbolTable)
 	fmt.Println(root.GetBytes())
+	// os.WriteFile("/Users/muhammedalican/Documents/projects/a-star/main.mbin", root.GetBytes(), 6044)
 }

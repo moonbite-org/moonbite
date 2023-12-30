@@ -49,7 +49,7 @@ var keywords = map[string]token_kind{
 }
 
 var bool_literals = []string{"true", "false"}
-var cardinal_literals = []string{"bool", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "float64"}
+var cardinal_literals = []string{"bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64"}
 
 func (l *lexer) throw(reason string) {
 	l.error = errors.Error{

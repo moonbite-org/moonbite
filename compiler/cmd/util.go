@@ -3,8 +3,6 @@ package cmd
 import (
 	"os"
 
-	"github.com/moonbite-org/moonbite/common"
-	parser "github.com/moonbite-org/moonbite/parser/cmd"
 	"gopkg.in/yaml.v3"
 )
 
@@ -45,40 +43,40 @@ func ParseConfig(config_path string) (ModConfig, error) {
 	return config, nil
 }
 
-type DummyTypeChecker struct{}
+// type DummyTypeChecker struct{}
 
-func (t DummyTypeChecker) GetDefault(typ parser.TypeLiteral) common.Object {
-	switch typ.TypeKind() {
-	case parser.TypeIdentifierKind:
-		switch typ.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value {
-		case "string", "String":
-			return common.StringObject{
-				Value: "",
-			}
-		case "bool", "Bool":
-			return common.BoolObject{
-				Value: false,
-			}
-		case "int", "Int",
-			"int8", "Int8",
-			"int16", "Int16",
-			"int32", "Int32",
-			"int64", "Int64",
-			"uint8", "Uint8",
-			"uint16", "Uint16",
-			"uint32", "Uint32",
-			"uint64", "Uint64":
-			return common.Uint32Object{
-				Value: 0,
-			}
-		default:
-			return common.StringObject{
-				Value: "not implemented",
-			}
-		}
-	default:
-		return common.StringObject{
-			Value: "not implemented",
-		}
-	}
-}
+// func (t DummyTypeChecker) GetDefault(typ parser.TypeLiteral) common.Object {
+// 	switch typ.TypeKind() {
+// 	case parser.TypeIdentifierKind:
+// 		switch typ.(parser.TypeIdentifier).Name.(parser.IdentifierExpression).Value {
+// 		case "string", "String":
+// 			return common.StringObject{
+// 				Value: "",
+// 			}
+// 		case "bool", "Bool":
+// 			return common.BoolObject{
+// 				Value: false,
+// 			}
+// 		case "int", "Int",
+// 			"int8", "Int8",
+// 			"int16", "Int16",
+// 			"int32", "Int32",
+// 			"int64", "Int64",
+// 			"uint8", "Uint8",
+// 			"uint16", "Uint16",
+// 			"uint32", "Uint32",
+// 			"uint64", "Uint64":
+// 			return common.Uint32Object{
+// 				Value: 0,
+// 			}
+// 		default:
+// 			return common.StringObject{
+// 				Value: "not implemented",
+// 			}
+// 		}
+// 	default:
+// 		return common.StringObject{
+// 			Value: "not implemented",
+// 		}
+// 	}
+// }

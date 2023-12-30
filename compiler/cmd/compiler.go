@@ -128,6 +128,8 @@ func (c *package_compiler) compile_statement(statement parser.Statement) (common
 func (c *package_compiler) compile_declaration_statement(statement parser.DeclarationStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
+	c.Typechecker.IsAssignable(*statement.Type, *statement.Value)
+
 	if statement.Value != nil {
 		value, err := c.compile_expression(*statement.Value, false)
 		if err.Exists {
@@ -135,7 +137,7 @@ func (c *package_compiler) compile_declaration_statement(statement parser.Declar
 		}
 		result = append(result, value...)
 	} else {
-		value_literal := c.Typechecker.GetDefault(*statement.Type)
+		value_literal := common.False
 		index := c.ConstantPool.Add(value_literal)
 		result = append(result, common.NewInstruction(common.OpConstant, index))
 	}
@@ -330,12 +332,12 @@ func (c *package_compiler) compile_unbound_fun_definition_statement(statement pa
 func (c *package_compiler) compile_bound_fun_definition_statement(statement parser.BoundFunDefinitionStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
-	for_ := statement.Signature.For.Name.(parser.IdentifierExpression).Value
-	symbol_table := c.TypeSymbolTable[for_]
+	// for_ := statement.Signature.For.Name.(parser.IdentifierExpression).Value
+	// symbol_table := c.TypeSymbolTable[for_]
 
-	if symbol_table == nil {
-		return result, errors.CreateCompileError(fmt.Sprintf("type '%s' is not defined", for_), statement.Signature.For.Location())
-	}
+	// if symbol_table == nil {
+	// 	return result, errors.CreateCompileError(fmt.Sprintf("type '%s' is not defined", for_), statement.Signature.For.Location())
+	// }
 
 	fun_instructions, err := c.compile_fun_body(statement.Signature, statement.Body)
 	if err.Exists {
@@ -347,13 +349,13 @@ func (c *package_compiler) compile_bound_fun_definition_statement(statement pars
 	index := c.ConstantPool.Add(value)
 	result = append(result, common.NewInstruction(common.OpConstant, index))
 
-	name := fmt.Sprintf("%s.%s.%s", c.package_name, for_, statement.Signature.Name.Value)
-	symbol, d_err := symbol_table.Define(name, parser.ConstantKind, statement.Hidden)
-	if d_err != nil {
-		return result, errors.CreateCompileError(d_err.Error(), statement.Signature.Name.Location())
-	}
+	// name := fmt.Sprintf("%s.%s.%s", c.package_name, for_, statement.Signature.Name.Value)
+	// symbol, d_err := symbol_table.Define(name, parser.ConstantKind, statement.Hidden)
+	// if d_err != nil {
+	// 	return result, errors.CreateCompileError(d_err.Error(), statement.Signature.Name.Location())
+	// }
 
-	result = append(result, common.NewInstruction(common.OpSet, symbol.Index))
+	result = append(result, common.NewInstruction(common.OpSet, 1000))
 
 	return result, errors.EmptyError
 }
@@ -361,11 +363,11 @@ func (c *package_compiler) compile_bound_fun_definition_statement(statement pars
 func (c *package_compiler) compile_type_definition_statement(statement parser.TypeDefinitionStatement) (common.InstructionSet, errors.Error) {
 	result := common.InstructionSet{}
 
-	if c.TypeSymbolTable[statement.Name.Value] != nil {
-		return result, errors.CreateCompileError(fmt.Sprintf("cannot redeclare type '%s'", statement.Name.Value), statement.Name.Location())
-	}
+	// if c.TypeSymbolTable[statement.Name.Value] != nil {
+	// 	return result, errors.CreateCompileError(fmt.Sprintf("cannot redeclare type '%s'", statement.Name.Value), statement.Name.Location())
+	// }
 
-	c.TypeSymbolTable[statement.Name.Value] = NewSymbolTable()
+	// c.TypeSymbolTable[statement.Name.Value] = NewSymbolTable()
 
 	return result, errors.EmptyError
 }
